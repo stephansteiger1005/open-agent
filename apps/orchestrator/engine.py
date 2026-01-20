@@ -70,15 +70,14 @@ class Orchestrator:
             
             # Simulate agent processing (replace with actual LLM call)
             if stream:
+                # Stream and collect content simultaneously
+                final_content_parts = []
                 async for chunk in self._simulate_agent_response(agent, messages, stream):
+                    final_content_parts.append(chunk)
                     yield StreamEvent(
                         event="model.delta",
                         data={"delta": chunk}
                     )
-                # Get full content for saving
-                final_content_parts = []
-                async for part in self._simulate_agent_response(agent, messages, False):
-                    final_content_parts.append(part)
                 final_content = "".join(final_content_parts)
             else:
                 # Non-streaming: collect all content
