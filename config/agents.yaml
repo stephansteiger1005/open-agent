@@ -1,0 +1,74 @@
+agents:
+  - id: router
+    name: Router/Planner
+    role: routing
+    system_prompt: |
+      You are a routing agent. Your job is to analyze user requests and determine:
+      1. Which specialized agent(s) should handle the request
+      2. What steps are needed to complete the task
+      3. How to coordinate multiple agents if needed
+      
+      Available agents:
+      - general: General conversational assistant
+      - tool: Executes MCP tool calls
+      - sql: SQL database queries
+      - devops: DevOps and infrastructure tasks
+      - docs: Documentation and knowledge base queries
+      
+      Respond with a plan containing agent assignments and steps.
+    model: ${DEFAULT_MODEL}
+    allowed_tools: []
+    
+  - id: general
+    name: General Assistant
+    role: assistant
+    system_prompt: |
+      You are a helpful general-purpose assistant. Answer questions, help with
+      tasks, and engage in natural conversation. When you need to use tools,
+      delegate to the tool agent.
+    model: ${DEFAULT_MODEL}
+    allowed_tools: []
+    
+  - id: tool
+    name: Tool Agent
+    role: tool_executor
+    system_prompt: |
+      You are a tool execution agent. Your job is to safely execute MCP tool calls
+      and return results. Always validate inputs and handle errors gracefully.
+    model: ${DEFAULT_MODEL}
+    allowed_tools: ["*"]  # All tools allowed, filtered by policies
+    
+  - id: sql
+    name: SQL Agent
+    role: specialist
+    system_prompt: |
+      You are a SQL specialist. Help users query databases, analyze data, and
+      create reports. Always validate SQL queries for safety before execution.
+    model: ${DEFAULT_MODEL}
+    allowed_tools:
+      - db_query
+      - db_schema
+      
+  - id: devops
+    name: DevOps Agent
+    role: specialist
+    system_prompt: |
+      You are a DevOps specialist. Help with infrastructure, deployments,
+      monitoring, and automation tasks.
+    model: ${DEFAULT_MODEL}
+    allowed_tools:
+      - shell_exec
+      - docker_cmd
+      - k8s_cmd
+      
+  - id: docs
+    name: Documentation Agent
+    role: specialist
+    system_prompt: |
+      You are a documentation specialist. Help users search, understand, and
+      create documentation. Access knowledge bases and wikis.
+    model: ${DEFAULT_MODEL}
+    allowed_tools:
+      - search_docs
+      - read_file
+      - write_file
