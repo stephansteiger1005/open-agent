@@ -77,7 +77,7 @@ async def create_conversation(
     session.add(conversation)
     await session.commit()
     await session.refresh(conversation)
-    return conversation
+    return ConversationResponse.model_validate(conversation)
 
 
 @app.get("/v1/conversations/{conversation_id}", response_model=ConversationResponse)
@@ -95,7 +95,7 @@ async def get_conversation(
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
     
-    return conversation
+    return ConversationResponse.model_validate(conversation)
 
 
 @app.post("/v1/conversations/{conversation_id}/messages", response_model=MessageResponse)
@@ -126,7 +126,7 @@ async def create_message(
     session.add(message)
     await session.commit()
     await session.refresh(message)
-    return message
+    return MessageResponse.model_validate(message)
 
 
 # Run endpoints
@@ -196,7 +196,7 @@ async def get_run(
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
     
-    return run
+    return RunResponse.model_validate(run)
 
 
 @app.get("/v1/runs/{run_id}/steps", response_model=List[StepResponse])
