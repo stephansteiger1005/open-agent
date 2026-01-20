@@ -31,28 +31,30 @@ async def test_db():
 @pytest.mark.asyncio
 async def test_create_conversation(test_db):
     """Test creating a conversation"""
+    session = await test_db.__anext__()
     conversation = Conversation(
         id=str(uuid.uuid4()),
-        metadata={"test": "data"},
+        metadata_={"test": "data"},
     )
-    test_db.add(conversation)
-    await test_db.commit()
-    await test_db.refresh(conversation)
+    session.add(conversation)
+    await session.commit()
+    await session.refresh(conversation)
     
     assert conversation.id is not None
-    assert conversation.metadata["test"] == "data"
+    assert conversation.metadata_["test"] == "data"
 
 
 @pytest.mark.asyncio
 async def test_create_message(test_db):
     """Test creating a message"""
+    session = await test_db.__anext__()
     # Create conversation first
     conversation = Conversation(
         id=str(uuid.uuid4()),
-        metadata={},
+        metadata_={},
     )
-    test_db.add(conversation)
-    await test_db.commit()
+    session.add(conversation)
+    await session.commit()
     
     # Create message
     message = Message(
@@ -61,10 +63,11 @@ async def test_create_message(test_db):
         role="user",
         content="Hello world",
         attachments=[],
+        metadata_={},
     )
-    test_db.add(message)
-    await test_db.commit()
-    await test_db.refresh(message)
+    session.add(message)
+    await session.commit()
+    await session.refresh(message)
     
     assert message.id is not None
     assert message.conversation_id == conversation.id

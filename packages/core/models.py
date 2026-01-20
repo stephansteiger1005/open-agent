@@ -28,7 +28,7 @@ class Conversation(Base):
     id = Column(String, primary_key=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    metadata = Column(JSON, default=dict)
+    metadata_ = Column("metadata", JSON, default=dict)
     
     messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
     runs = relationship("Run", back_populates="conversation", cascade="all, delete-orphan")
@@ -43,7 +43,7 @@ class Message(Base):
     content = Column(Text)
     attachments = Column(JSON, default=list)
     created_at = Column(DateTime, default=datetime.utcnow)
-    metadata = Column(JSON, default=dict)
+    metadata_ = Column("metadata", JSON, default=dict)
     
     conversation = relationship("Conversation", back_populates="messages")
 
@@ -58,7 +58,7 @@ class Run(Base):
     started_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
     error = Column(Text, nullable=True)
-    metadata = Column(JSON, default=dict)
+    metadata_ = Column("metadata", JSON, default=dict)
     
     conversation = relationship("Conversation", back_populates="runs")
     steps = relationship("Step", back_populates="run", cascade="all, delete-orphan")

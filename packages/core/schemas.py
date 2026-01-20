@@ -47,10 +47,11 @@ class ConversationResponse(BaseModel):
     id: str
     created_at: datetime
     updated_at: datetime
-    metadata: Dict[str, Any]
+    metadata_: Dict[str, Any] = Field(alias="metadata")
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 
 class MessageResponse(BaseModel):
@@ -60,10 +61,11 @@ class MessageResponse(BaseModel):
     content: str
     attachments: List[Dict[str, Any]]
     created_at: datetime
-    metadata: Dict[str, Any]
+    metadata_: Dict[str, Any] = Field(alias="metadata")
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 
 class RunResponse(BaseModel):
@@ -74,10 +76,11 @@ class RunResponse(BaseModel):
     started_at: datetime
     completed_at: Optional[datetime] = None
     error: Optional[str] = None
-    metadata: Dict[str, Any]
+    metadata_: Dict[str, Any] = Field(alias="metadata")
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 
 class StepResponse(BaseModel):

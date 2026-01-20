@@ -72,7 +72,7 @@ async def create_conversation(
     """Create a new conversation"""
     conversation = Conversation(
         id=str(uuid.uuid4()),
-        metadata=request.metadata,
+        metadata_=request.metadata,
     )
     session.add(conversation)
     await session.commit()
@@ -121,6 +121,7 @@ async def create_message(
         role=request.role.value,
         content=request.content,
         attachments=request.attachments or [],
+        metadata_={},
     )
     session.add(message)
     await session.commit()
@@ -152,7 +153,7 @@ async def create_run(
         conversation_id=conversation_id,
         agent_id=request.agent_id,
         status="queued",
-        metadata=request.metadata,
+        metadata_=request.metadata,
     )
     session.add(run)
     await session.commit()

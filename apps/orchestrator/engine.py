@@ -93,7 +93,7 @@ class Orchestrator:
                 role="assistant",
                 content=final_content,
                 attachments=[],
-                metadata={"run_id": run.id, "agent_id": agent.id}
+                metadata_={"run_id": run.id, "agent_id": agent.id}
             )
             session.add(assistant_message)
             
