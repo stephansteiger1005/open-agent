@@ -9,7 +9,8 @@ if ! command -v jq &> /dev/null; then
     echo "Error: jq is not installed. Please install it first."
     echo "  Ubuntu/Debian: sudo apt-get install jq"
     echo "  macOS: brew install jq"
-    echo "  CentOS/RHEL: sudo yum install jq"
+    echo "  CentOS/RHEL 8+: sudo dnf install jq"
+    echo "  CentOS/RHEL 7: sudo yum install jq"
     exit 1
 fi
 

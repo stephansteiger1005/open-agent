@@ -49,8 +49,10 @@ class OpenAIProvider:
                 )
                 
                 async for chunk in response:
-                    if chunk.choices and chunk.choices[0].delta.content:
-                        yield chunk.choices[0].delta.content
+                    if chunk.choices and len(chunk.choices) > 0:
+                        delta = chunk.choices[0].delta
+                        if delta and delta.content:
+                            yield delta.content
             else:
                 # Non-streaming mode
                 response = await self.client.chat.completions.create(
@@ -61,8 +63,10 @@ class OpenAIProvider:
                     stream=False,
                 )
                 
-                if response.choices and response.choices[0].message.content:
-                    yield response.choices[0].message.content
+                if response.choices and len(response.choices) > 0:
+                    message = response.choices[0].message
+                    if message and message.content:
+                        yield message.content
                     
         except Exception as e:
             raise RuntimeError(f"OpenAI API error: {str(e)}")
