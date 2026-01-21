@@ -97,8 +97,10 @@ class Pipeline:
         """
         try:
             # Create a new conversation for this request
-            # Note: Each chat request creates a new conversation to ensure clean state
-            # For production use, consider implementing conversation reuse or cleanup
+            # Note: Each chat request creates a new conversation to ensure clean state.
+            # This is a trade-off: simple implementation but conversations accumulate.
+            # TODO: For production, implement conversation reuse based on OpenWebUI session
+            # or add periodic cleanup of old conversations to prevent database growth.
             conv_response = requests.post(
                 f"{self.valves.API_BASE_URL}/v1/conversations",
                 headers={
@@ -126,7 +128,10 @@ class Pipeline:
                         },
                         timeout=10
                     )
-                    msg_response.raise_for_status()  # Raise error if message posting fails
+                    # Ensure message is posted successfully before continuing
+                    # If this fails, the conversation will be incomplete and the agent
+                    # won't have full context for generating a response
+                    msg_response.raise_for_status()
             
             # Determine if streaming is requested
             stream = body.get("stream", True)

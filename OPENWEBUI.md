@@ -54,9 +54,9 @@ OpenAI Provider (Chat Completion)
 ### Architecture
 
 1. **OpenWebUI Service**: Runs the OpenWebUI frontend on port 3000
-2. **Pipe Integration**: The `openwebui_pipe.py` file acts as a bridge between OpenWebUI and the agent API
-3. **Model Discovery**: The pipe dynamically discovers available agents from the API and exposes them as models
-4. **Chat Completion**: When you chat with a model, the pipe:
+2. **Pipeline Integration**: The `multi_agent_pipeline.py` file acts as a bridge between OpenWebUI and the agent API
+3. **Model Discovery**: The pipeline dynamically discovers available agents from the API and exposes them as models
+4. **Chat Completion**: When you chat with a model, the pipeline:
    - Creates a conversation in the API
    - Adds messages to the conversation
    - Executes a run with the selected agent
