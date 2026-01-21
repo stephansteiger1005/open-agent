@@ -1,6 +1,15 @@
 #!/bin/bash
 # Example curl commands for testing the Multi-Agent OpenWebUI API
 
+# Check for required dependencies
+if ! command -v jq &> /dev/null; then
+    echo "Error: jq is not installed. Please install it first."
+    echo "  Ubuntu/Debian: sudo apt-get install jq"
+    echo "  macOS: brew install jq"
+    echo "  CentOS/RHEL: sudo yum install jq"
+    exit 1
+fi
+
 API_BASE="http://localhost:8000"
 API_KEY="dev_key_123456789"
 
@@ -14,10 +23,18 @@ echo -e "\n"
 
 # Create a conversation
 echo "2. Create Conversation"
-CONVERSATION_ID=$(curl -s -X POST "$API_BASE/v1/conversations" \
+CONVERSATION_RESPONSE=$(curl -s -X POST "$API_BASE/v1/conversations" \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"metadata": {"user": "test_user"}}' | jq -r '.id')
+  -d '{"metadata": {"user": "test_user"}}')
+CONVERSATION_ID=$(echo "$CONVERSATION_RESPONSE" | jq -r '.id')
+
+if [ -z "$CONVERSATION_ID" ] || [ "$CONVERSATION_ID" = "null" ]; then
+    echo "Error: Failed to create conversation"
+    echo "Response: $CONVERSATION_RESPONSE"
+    exit 1
+fi
+
 echo "Created conversation: $CONVERSATION_ID"
 echo
 
@@ -35,14 +52,22 @@ echo
 
 # Create a run (non-streaming)
 echo "4. Create Run (Non-Streaming)"
-RUN_ID=$(curl -s -X POST "$API_BASE/v1/conversations/$CONVERSATION_ID/runs" \
+RUN_RESPONSE=$(curl -s -X POST "$API_BASE/v1/conversations/$CONVERSATION_ID/runs" \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "agent_id": "router",
     "stream": false,
     "metadata": {}
-  }' | jq -r '.run_id')
+  }')
+RUN_ID=$(echo "$RUN_RESPONSE" | jq -r '.run_id')
+
+if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+    echo "Error: Failed to create run"
+    echo "Response: $RUN_RESPONSE"
+    exit 1
+fi
+
 echo "Created run: $RUN_ID"
 echo
 
