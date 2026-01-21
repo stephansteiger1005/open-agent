@@ -11,6 +11,9 @@ from openai import AsyncOpenAI
 # Configure logging
 logger = logging.getLogger(__name__)
 
+# Constants
+LOG_CONTENT_PREVIEW_LENGTH = 200  # Number of characters to show in debug logs
+
 
 class OpenAIProvider:
     """Provider for OpenAI API interactions"""
@@ -20,7 +23,7 @@ class OpenAIProvider:
         if not api_key:
             raise ValueError("OPENAI_API_KEY environment variable is required")
         
-        # Configure timeout settings (default: 60 seconds for connection, 600 for read)
+        # Configure timeout settings
         timeout = float(os.getenv("OPENAI_TIMEOUT", "60.0"))
         
         logger.info(f"Initializing OpenAI provider with timeout: {timeout}s")
@@ -106,7 +109,8 @@ class OpenAIProvider:
                             f"Response length: {content_length} chars, "
                             f"Time: {elapsed_time:.2f}s"
                         )
-                        logger.debug(f"OpenAI response content: {message.content[:200]}...")
+                        content_preview = message.content[:LOG_CONTENT_PREVIEW_LENGTH]
+                        logger.debug(f"OpenAI response content: {content_preview}...")
                         yield message.content
                     else:
                         logger.warning("OpenAI response has no content")
