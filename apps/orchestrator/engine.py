@@ -39,6 +39,11 @@ class Orchestrator:
     ) -> AsyncGenerator[StreamEvent, None]:
         """Execute a run with the specified agent"""
         
+        logger.info(
+            f"Starting run execution - Run ID: {run.id}, Agent ID: {run.agent_id}, "
+            f"Conversation ID: {run.conversation_id}, Stream: {stream}"
+        )
+        
         # Update run status
         run.status = RunStatus.RUNNING.value
         await session.commit()
@@ -53,7 +58,10 @@ class Orchestrator:
             # Get agent configuration
             agent = self.agent_registry.get_agent(run.agent_id)
             if not agent:
+                logger.error(f"Agent not found: {run.agent_id}")
                 raise ValueError(f"Agent not found: {run.agent_id}")
+            
+            logger.info(f"Using agent '{agent.name}' (role: {agent.role}, model: {agent.model})")
             
             # Get conversation messages for context
             result = await session.execute(
@@ -62,6 +70,7 @@ class Orchestrator:
                 .order_by(Message.created_at)
             )
             messages = result.scalars().all()
+            logger.debug(f"Retrieved {len(messages)} messages from conversation")
             
             # Create a step for this execution
             step = Step(
@@ -75,6 +84,8 @@ class Orchestrator:
             )
             session.add(step)
             await session.commit()
+            
+            logger.info(f"Created step {step.id} for run {run.id}")
             
             if stream:
                 yield StreamEvent(
@@ -100,6 +111,8 @@ class Orchestrator:
                     final_content_parts.append(part)
                 final_content = "".join(final_content_parts)
             
+            logger.info(f"Agent response generated: {len(final_content)} characters")
+            
             # Update step with output
             step.status = StepStatus.COMPLETED.value
             step.output_data = {"content": final_content}
@@ -121,6 +134,8 @@ class Orchestrator:
             run.completed_at = datetime.utcnow()
             await session.commit()
             
+            logger.info(f"Run {run.id} completed successfully")
+            
             if stream:
                 yield StreamEvent(
                     event="run.completed",
@@ -128,6 +143,10 @@ class Orchestrator:
                 )
         
         except Exception as e:
+            logger.error(
+                f"Run {run.id} failed with error: {type(e).__name__}: {str(e)}",
+                exc_info=True
+            )
             run.status = RunStatus.FAILED.value
             run.error = str(e)
             run.completed_at = datetime.utcnow()
