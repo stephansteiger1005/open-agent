@@ -77,10 +77,17 @@ SQLite by default, Postgres optional.
   - caches tool schemas
   - applies security controls
 - db (sqlite volume or postgres)
+- **openwebui**
+  - **User-friendly chat interface**
+  - **Multi-agent model selection**
+  - **Real-time streaming responses**
+  - **Available at http://localhost:3000**
 
 OpenWebUI integration:
+- **Fully integrated** - OpenWebUI runs as a service with automatic agent discovery
 - Plugin/Pipe: OpenWebUI calls this REST API as backend agent runtime
-- Sidecar: OpenWebUI unchanged, accessed via separate endpoint/client
+- All agents exposed as selectable models in the UI
+- See [OPENWEBUI.md](OPENWEBUI.md) for detailed usage instructions
 
 ---
 
