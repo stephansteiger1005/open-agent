@@ -55,4 +55,25 @@ services:
       - 1.1.1.1
       - 8.8.8.8
 
-  # optional: db service ist bei sqlite nicht nötig – kann weg
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
+    ports:
+      - "3000:8080"
+    environment:
+      - WEBUI_AUTH=false  # Disable authentication for easier setup
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # Note: The following OpenAI config is for OpenWebUI's built-in OpenAI support
+      # Our agents are exposed via the custom pipe (multi_agent_pipe.py) instead
+      - ENABLE_OPENAI_API=true
+      - OPENAI_API_BASE_URL=http://api:8000/v1
+    volumes:
+      - openwebui_data:/app/backend/data
+      - ./apps/openwebui_pipe.py:/app/backend/data/functions/multi_agent_pipe.py
+    depends_on:
+      - api
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+
+volumes:
+  openwebui_data:
