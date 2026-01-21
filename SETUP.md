@@ -29,6 +29,8 @@ docker-compose up --build
 
 4. The API will be available at `http://localhost:8000`
 
+**Note on Networking:** The system is configured to use host networking mode (`network_mode: host`) to ensure reliable connectivity to external APIs like OpenAI, especially in WSL/Docker environments where network isolation can cause connectivity issues. This means containers share the host's network stack directly.
+
 ### Testing the API
 
 Run the included curl examples:
@@ -282,6 +284,13 @@ DEFAULT_MODEL=llama2
 **Agent not found**
 - Verify agent ID in `config/agents.yaml`
 - Check for YAML syntax errors
+
+**OpenAI API connection errors**
+- The system uses host networking mode to avoid connectivity issues in Docker/WSL environments
+- Verify `OPENAI_API_KEY` is set correctly in `.env`
+- Test API key on host: `curl https://api.openai.com/v1/models -H "Authorization: Bearer $OPENAI_API_KEY"`
+- Check logs with `docker-compose logs api` or `docker-compose logs orchestrator`
+- Set `LOG_LEVEL=DEBUG` for detailed OpenAI request/response logging
 
 ## Production Deployment
 

@@ -6,8 +6,7 @@ services:
       context: .
       dockerfile: deploy/Dockerfile
       network: host
-    ports:
-      - "8000:8000"
+    network_mode: host
     environment:
       - DATABASE_URL=sqlite:///data/app.db
       - AUTH_MODE=apikey
@@ -28,6 +27,7 @@ services:
       context: .
       dockerfile: deploy/Dockerfile
       network: host
+    network_mode: host
     environment:
       - DATABASE_URL=sqlite:///data/app.db
       - MODEL_PROVIDER=${MODEL_PROVIDER:-openai}
@@ -43,6 +43,7 @@ services:
 
   db:
     image: alpine:latest
+    network_mode: host
     volumes:
       - ./data:/data
     command: tail -f /dev/null
