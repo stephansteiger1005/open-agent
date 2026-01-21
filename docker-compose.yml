@@ -5,9 +5,8 @@ services:
     build:
       context: .
       dockerfile: deploy/Dockerfile
-      network: host
-    ports:
-      - "8000:8000"
+      network: host  # Use host network during build for package downloads
+    network_mode: host  # Use host network at runtime for OpenAI API connectivity
     environment:
       - DATABASE_URL=sqlite:///data/app.db
       - AUTH_MODE=apikey
@@ -27,7 +26,8 @@ services:
     build:
       context: .
       dockerfile: deploy/Dockerfile
-      network: host
+      network: host  # Use host network during build for package downloads
+    network_mode: host  # Use host network at runtime for OpenAI API connectivity
     environment:
       - DATABASE_URL=sqlite:///data/app.db
       - MODEL_PROVIDER=${MODEL_PROVIDER:-openai}
@@ -43,6 +43,7 @@ services:
 
   db:
     image: alpine:latest
+    network_mode: host  # Use host network for consistency with other services
     volumes:
       - ./data:/data
     command: tail -f /dev/null
