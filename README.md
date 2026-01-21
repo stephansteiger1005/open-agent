@@ -30,8 +30,8 @@ Each agent is a stateless service with:
 - optional policies (data redaction, SQL safety, etc.)
 
 Required agents:
-1. Router/Planner – decides which agent(s) should act, creates a plan, delegates tasks.
-2. General Assistant – default conversational agent.
+1. Router/Planner – decides which agent(s) should act, creates a plan, delegates tasks. **Uses OpenAI for intelligent classification and agent selection.**
+2. General Assistant – default conversational agent. **Uses OpenAI for natural language chat completion.**
 3. Tool Agent – executes MCP tool calls safely (optionally separated for security).
 4. Domain Specialists – e.g. sql-agent, devops-agent, docs-agent.
 
@@ -43,9 +43,9 @@ Required agents:
 ### Orchestration
 Run loop:
 1. receive user message
-2. router produces plan (single-agent or multi-step)
+2. router produces plan (single-agent or multi-step) **using OpenAI for intelligent decision-making**
 3. execute steps:
-   - model calls
+   - model calls **via OpenAI API**
    - tool calls via MCP
    - intermediate state updates
 4. stream events and finalize response
@@ -140,6 +140,7 @@ Environment:
 - AUTH_MODE=apikey|jwt
 - API_KEYS=...
 - MODEL_PROVIDER=openai|ollama|azure|...
+- **OPENAI_API_KEY=...** (required for OpenAI-powered agents)
 - MCP_SERVERS=...
 - DEFAULT_MODEL=...
 
@@ -157,6 +158,7 @@ Files:
 - apps/orchestrator/
 - apps/mcp_gateway/
 - packages/core/
+  - **openai_provider.py** - OpenAI integration for agent responses
 - packages/clients/
 - config/
 - tests/
@@ -191,5 +193,6 @@ Files:
 
 - Working codebase
 - curl examples
+- **OpenAI agent selection and chat completion example**
 - OpenWebUI pipe/plugin example
 - Minimal README with setup and extension guide
