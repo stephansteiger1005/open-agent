@@ -40,10 +40,14 @@ async def main():
     logger.info("Orchestrator worker is running. Press Ctrl+C to stop.")
     shutdown_event = asyncio.Event()
     
+    def handle_shutdown():
+        """Handle shutdown signal"""
+        shutdown_event.set()
+    
     # Setup signal handlers for graceful shutdown
     loop = asyncio.get_event_loop()
     for sig in (signal.SIGTERM, signal.SIGINT):
-        loop.add_signal_handler(sig, lambda: shutdown_event.set())
+        loop.add_signal_handler(sig, handle_shutdown)
     
     try:
         await shutdown_event.wait()

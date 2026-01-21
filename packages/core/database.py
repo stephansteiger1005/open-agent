@@ -6,19 +6,22 @@ from pathlib import Path
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/app.db")
 
+
+def _ensure_db_directory_exists(db_url: str) -> None:
+    """Ensure the directory for the database file exists"""
+    db_path = None
+    if db_url.startswith("sqlite+aiosqlite:///"):
+        db_path = db_url.replace("sqlite+aiosqlite:///", "")
+    elif db_url.startswith("sqlite:///"):
+        db_path = db_url.replace("sqlite:///", "")
+    
+    if db_path and not db_path.startswith(":memory:"):
+        db_file = Path(db_path)
+        db_file.parent.mkdir(parents=True, exist_ok=True)
+
+
 # Ensure the directory for the database file exists
-if DATABASE_URL.startswith("sqlite+aiosqlite:///"):
-    # Extract the file path from the aiosqlite URL
-    db_path = DATABASE_URL.replace("sqlite+aiosqlite:///", "")
-    if db_path and not db_path.startswith(":memory:"):
-        db_file = Path(db_path)
-        db_file.parent.mkdir(parents=True, exist_ok=True)
-elif DATABASE_URL.startswith("sqlite:///"):
-    # Extract the file path from the sqlite URL
-    db_path = DATABASE_URL.replace("sqlite:///", "")
-    if db_path and not db_path.startswith(":memory:"):
-        db_file = Path(db_path)
-        db_file.parent.mkdir(parents=True, exist_ok=True)
+_ensure_db_directory_exists(DATABASE_URL)
 
 # Convert sqlite:/// to sqlite+aiosqlite:/// for async support
 if DATABASE_URL.startswith("sqlite:///"):
