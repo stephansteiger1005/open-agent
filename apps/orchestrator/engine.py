@@ -1,6 +1,7 @@
 from typing import Dict, Any, AsyncGenerator, Optional
 import uuid
 import os
+import logging
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -10,12 +11,17 @@ from packages.core.schemas import StreamEvent
 from .agents import get_agent_registry, Agent
 from apps.mcp_gateway.client import get_mcp_client
 
+# Configure logging
+logger = logging.getLogger(__name__)
+
 # Import OpenAI provider if available
 try:
     from packages.core.openai_provider import get_openai_provider
     OPENAI_AVAILABLE = True
-except (ImportError, ValueError):
+    logger.info("OpenAI provider is available")
+except (ImportError, ValueError) as e:
     OPENAI_AVAILABLE = False
+    logger.warning(f"OpenAI provider not available: {e}")
 
 
 class Orchestrator:
@@ -33,6 +39,11 @@ class Orchestrator:
     ) -> AsyncGenerator[StreamEvent, None]:
         """Execute a run with the specified agent"""
         
+        logger.info(
+            f"Starting run execution - Run ID: {run.id}, Agent ID: {run.agent_id}, "
+            f"Conversation ID: {run.conversation_id}, Stream: {stream}"
+        )
+        
         # Update run status
         run.status = RunStatus.RUNNING.value
         await session.commit()
@@ -47,7 +58,10 @@ class Orchestrator:
             # Get agent configuration
             agent = self.agent_registry.get_agent(run.agent_id)
             if not agent:
+                logger.error(f"Agent not found: {run.agent_id}")
                 raise ValueError(f"Agent not found: {run.agent_id}")
+            
+            logger.info(f"Using agent '{agent.name}' (role: {agent.role}, model: {agent.model})")
             
             # Get conversation messages for context
             result = await session.execute(
@@ -56,6 +70,7 @@ class Orchestrator:
                 .order_by(Message.created_at)
             )
             messages = result.scalars().all()
+            logger.debug(f"Retrieved {len(messages)} messages from conversation")
             
             # Create a step for this execution
             step = Step(
@@ -69,6 +84,8 @@ class Orchestrator:
             )
             session.add(step)
             await session.commit()
+            
+            logger.info(f"Created step {step.id} for run {run.id}")
             
             if stream:
                 yield StreamEvent(
@@ -94,6 +111,8 @@ class Orchestrator:
                     final_content_parts.append(part)
                 final_content = "".join(final_content_parts)
             
+            logger.info(f"Agent response generated: {len(final_content)} characters")
+            
             # Update step with output
             step.status = StepStatus.COMPLETED.value
             step.output_data = {"content": final_content}
@@ -115,6 +134,8 @@ class Orchestrator:
             run.completed_at = datetime.utcnow()
             await session.commit()
             
+            logger.info(f"Run {run.id} completed successfully")
+            
             if stream:
                 yield StreamEvent(
                     event="run.completed",
@@ -122,6 +143,10 @@ class Orchestrator:
                 )
         
         except Exception as e:
+            logger.error(
+                f"Run {run.id} failed with error: {type(e).__name__}: {str(e)}",
+                exc_info=True
+            )
             run.status = RunStatus.FAILED.value
             run.error = str(e)
             run.completed_at = datetime.utcnow()
@@ -145,9 +170,17 @@ class Orchestrator:
         # Check if OpenAI should be used
         use_openai = OPENAI_AVAILABLE and os.getenv("OPENAI_API_KEY")
         
+        logger.info(
+            f"Generating response for agent '{agent.id}' - "
+            f"OpenAI available: {OPENAI_AVAILABLE}, "
+            f"API key configured: {bool(os.getenv('OPENAI_API_KEY'))}, "
+            f"Will use OpenAI: {use_openai}"
+        )
+        
         if use_openai:
             # Use OpenAI for real LLM responses
             try:
+                logger.info(f"Using OpenAI for agent '{agent.id}' with model '{agent.model}'")
                 provider = get_openai_provider()
                 
                 # Build messages for OpenAI API
@@ -159,6 +192,11 @@ class Orchestrator:
                         "role": msg.role,
                         "content": msg.content
                     })
+                
+                logger.debug(
+                    f"Prepared {len(api_messages)} messages for OpenAI "
+                    f"(1 system + {len(messages)} conversation)"
+                )
                 
                 # Get model from agent config or environment
                 model = agent.model if agent.model else os.getenv("DEFAULT_MODEL", "gpt-4")
@@ -172,13 +210,24 @@ class Orchestrator:
                 ):
                     yield chunk
                     
+                logger.info(f"Successfully completed OpenAI response for agent '{agent.id}'")
+                    
             except Exception as e:
                 # Fall back to mock response on error
+                logger.error(
+                    f"Error using OpenAI for agent '{agent.id}': {type(e).__name__}: {str(e)}. "
+                    f"Falling back to mock response.",
+                    exc_info=True
+                )
                 yield f"Error using OpenAI: {str(e)}. "
                 async for chunk in self._mock_agent_response(agent, stream):
                     yield chunk
         else:
             # Fall back to mock response
+            logger.info(
+                f"Using mock response for agent '{agent.id}' - "
+                f"OpenAI not available or not configured"
+            )
             async for chunk in self._mock_agent_response(agent, stream):
                 yield chunk
     

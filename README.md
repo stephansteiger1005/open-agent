@@ -141,6 +141,8 @@ Environment:
 - API_KEYS=...
 - MODEL_PROVIDER=openai|ollama|azure|...
 - **OPENAI_API_KEY=...** (required for OpenAI-powered agents)
+- **OPENAI_TIMEOUT=60** (OpenAI request timeout in seconds, default: 60)
+- **LOG_LEVEL=INFO** (logging level: DEBUG, INFO, WARNING, ERROR)
 - MCP_SERVERS=...
 - DEFAULT_MODEL=...
 
@@ -149,6 +151,25 @@ Files:
 - docker-compose.yml
 - config/agents.yaml
 - config/tool_policies.yaml
+
+### Logging
+
+The system includes comprehensive logging at multiple levels:
+- **API Layer** (`apps/api/main.py`): Logs request handling, run creation, and execution
+- **Orchestrator** (`apps/orchestrator/engine.py`): Logs agent selection, run execution lifecycle, and errors
+- **OpenAI Provider** (`packages/core/openai_provider.py`): Logs all OpenAI API calls with timing, parameters, and detailed error information
+
+Set `LOG_LEVEL=DEBUG` for detailed debugging information including:
+- OpenAI request/response messages
+- Agent selection reasoning
+- Detailed error stack traces
+- Timing information for all operations
+
+When troubleshooting OpenAI timeout issues:
+1. Check logs for "OpenAI API request starting" to see parameters
+2. Look for "OpenAI API error" entries with timing and error details
+3. Adjust `OPENAI_TIMEOUT` if requests consistently timeout
+4. Verify `OPENAI_API_KEY` is correctly configured
 
 ---
 

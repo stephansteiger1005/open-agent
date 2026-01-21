@@ -3,8 +3,16 @@ OpenAI provider for agent responses.
 This module integrates OpenAI API to provide LLM capabilities for agents.
 """
 import os
+import logging
+import time
 from typing import List, Dict, Any, AsyncGenerator, Optional
 from openai import AsyncOpenAI
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+# Constants
+LOG_CONTENT_PREVIEW_LENGTH = 200  # Number of characters to show in debug logs
 
 
 class OpenAIProvider:
@@ -14,7 +22,15 @@ class OpenAIProvider:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("OPENAI_API_KEY environment variable is required")
-        self.client = AsyncOpenAI(api_key=api_key)
+        
+        # Configure timeout settings
+        timeout = float(os.getenv("OPENAI_TIMEOUT", "60.0"))
+        
+        logger.info(f"Initializing OpenAI provider with timeout: {timeout}s")
+        self.client = AsyncOpenAI(
+            api_key=api_key,
+            timeout=timeout
+        )
     
     async def chat_completion(
         self,
@@ -37,9 +53,20 @@ class OpenAIProvider:
         Yields:
             str: Response content chunks if streaming, full response otherwise
         """
+        start_time = time.time()
+        
+        # Log the request details
+        logger.info(
+            f"OpenAI API request starting - Model: {model}, Stream: {stream}, "
+            f"Messages: {len(messages)}, Temperature: {temperature}, "
+            f"Max Tokens: {max_tokens or 'default'}"
+        )
+        logger.debug(f"OpenAI request messages: {messages}")
+        
         try:
             if stream:
                 # Streaming mode
+                logger.debug("Initiating streaming chat completion")
                 response = await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
@@ -48,13 +75,22 @@ class OpenAIProvider:
                     stream=True,
                 )
                 
+                chunk_count = 0
                 async for chunk in response:
                     if chunk.choices and len(chunk.choices) > 0:
                         delta = chunk.choices[0].delta
                         if delta and delta.content:
+                            chunk_count += 1
                             yield delta.content
+                
+                elapsed_time = time.time() - start_time
+                logger.info(
+                    f"OpenAI streaming completed - Model: {model}, "
+                    f"Chunks: {chunk_count}, Time: {elapsed_time:.2f}s"
+                )
             else:
                 # Non-streaming mode
+                logger.debug("Initiating non-streaming chat completion")
                 response = await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
@@ -66,10 +102,33 @@ class OpenAIProvider:
                 if response.choices and len(response.choices) > 0:
                     message = response.choices[0].message
                     if message and message.content:
+                        elapsed_time = time.time() - start_time
+                        content_length = len(message.content)
+                        logger.info(
+                            f"OpenAI request completed - Model: {model}, "
+                            f"Response length: {content_length} chars, "
+                            f"Time: {elapsed_time:.2f}s"
+                        )
+                        content_preview = message.content[:LOG_CONTENT_PREVIEW_LENGTH]
+                        logger.debug(f"OpenAI response content: {content_preview}...")
                         yield message.content
+                    else:
+                        logger.warning("OpenAI response has no content")
+                else:
+                    logger.warning("OpenAI response has no choices")
                     
         except Exception as e:
-            raise RuntimeError(f"OpenAI API error: {str(e)}")
+            elapsed_time = time.time() - start_time
+            error_type = type(e).__name__
+            error_message = str(e)
+            
+            logger.error(
+                f"OpenAI API error - Model: {model}, Error Type: {error_type}, "
+                f"Message: {error_message}, Time: {elapsed_time:.2f}s",
+                exc_info=True
+            )
+            
+            raise RuntimeError(f"OpenAI API error: {error_message}")
 
 
 # Global provider instance

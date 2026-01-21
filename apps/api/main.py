@@ -6,6 +6,7 @@ from typing import List, Optional
 import uuid
 import os
 import json
+import logging
 
 from packages.core.database import init_db, get_session
 from packages.core.models import Conversation, Message, Run, Step
@@ -24,6 +25,13 @@ from packages.core.schemas import (
 from apps.orchestrator.agents import get_agent_registry
 from apps.orchestrator.engine import get_orchestrator
 from apps.mcp_gateway.client import get_mcp_client
+
+# Configure logging
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 
 app = FastAPI(
@@ -56,10 +64,15 @@ async def verify_api_key(authorization: Optional[str] = Header(None)):
 @app.on_event("startup")
 async def startup_event():
     """Initialize database and services on startup"""
+    logger.info("Starting API server...")
     await init_db()
+    logger.info("Database initialized successfully")
     # Initialize agent registry and MCP client
-    get_agent_registry()
+    registry = get_agent_registry()
+    logger.info(f"Agent registry initialized with {len(registry.list_agents())} agents")
     get_mcp_client()
+    logger.info("MCP client initialized")
+    logger.info("API server startup complete")
 
 
 # Conversation endpoints
@@ -138,6 +151,11 @@ async def create_run(
     _: bool = Depends(verify_api_key),
 ):
     """Create and execute a run"""
+    logger.info(
+        f"Creating run for conversation {conversation_id} with agent {request.agent_id}, "
+        f"stream={request.stream}"
+    )
+    
     # Verify conversation exists
     result = await session.execute(
         select(Conversation).filter(Conversation.id == conversation_id)
@@ -145,6 +163,7 @@ async def create_run(
     conversation = result.scalar_one_or_none()
     
     if not conversation:
+        logger.warning(f"Conversation not found: {conversation_id}")
         raise HTTPException(status_code=404, detail="Conversation not found")
     
     # Create run
@@ -158,6 +177,8 @@ async def create_run(
     session.add(run)
     await session.commit()
     await session.refresh(run)
+    
+    logger.info(f"Run created: {run.id}, executing with orchestrator...")
     
     # Execute run
     orchestrator = get_orchestrator()
@@ -178,6 +199,7 @@ async def create_run(
         async for event in orchestrator.execute_run(session, run, stream=False):
             events.append(event)
         
+        logger.info(f"Run {run.id} completed with status: {run.status}")
         return {"run_id": run.id, "status": run.status}
 
 
