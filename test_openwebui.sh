@@ -1,9 +1,8 @@
 #!/bin/bash
+set -e
 
 # Test script for OpenWebUI integration
 # This script verifies that all components are working together
-
-set -e
 
 echo "==================================="
 echo "OpenWebUI Integration Test"

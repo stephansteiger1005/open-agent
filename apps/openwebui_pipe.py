@@ -8,8 +8,12 @@ for direct interaction.
 import os
 import requests
 import json
+import logging
 from typing import List, Union, Generator, Iterator
 from pydantic import BaseModel
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class Pipe:
@@ -51,7 +55,7 @@ class Pipe:
             return models
             
         except Exception as e:
-            print(f"Error fetching agents: {e}")
+            logger.error(f"Error fetching agents: {e}")
             # Return fallback models
             return [
                 {"id": "router", "name": "Router/Planner"},
