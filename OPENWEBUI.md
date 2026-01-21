@@ -6,6 +6,7 @@ This document describes how to use the OpenWebUI interface with the multi-agent 
 
 OpenWebUI is integrated into the system and provides a user-friendly chat interface for interacting with the multi-agent system. The integration exposes each agent as a separate model in OpenWebUI:
 
+- **Auto Router** - Automatically classifies user requests and routes to the best specialist agent
 - **Router/Planner** - Intelligent agent routing and task coordination
 - **General Assistant** - General-purpose conversational AI
 - **Tool Agent** - Executes MCP tool calls
@@ -36,12 +37,12 @@ http://localhost:3000
 
 ## How It Works
 
-The integration uses an OpenWebUI "pipe" (function) to bridge OpenWebUI with the multi-agent REST API:
+The integration uses an OpenWebUI pipeline to bridge OpenWebUI with the multi-agent REST API:
 
 ```
 OpenWebUI (UI) 
   ↓
-openwebui_pipe.py (Bridge)
+multi_agent_pipeline.py (Bridge)
   ↓
 API Service (FastAPI)
   ↓
@@ -69,6 +70,7 @@ OpenAI Provider (Chat Completion)
 1. In OpenWebUI, click on the model dropdown (top of chat)
 2. Under "Multi-Agent System", you'll see all available agents
 3. Select the agent you want to chat with:
+   - **Auto Router** - Best for most users! Automatically routes to the right specialist
    - **Router/Planner** for complex tasks requiring coordination
    - **General Assistant** for general questions and conversation
    - **SQL Agent** for database-related queries
@@ -82,15 +84,23 @@ Simply type your message and press Enter. The selected agent will:
 2. Process it using OpenAI
 3. Stream the response back in real-time
 
-### Router Agent
+### Auto Router Agent (Recommended)
 
-The Router/Planner agent is special - it can:
-- Analyze your request
-- Determine which specialist agent is best suited
-- Coordinate multiple agents for complex tasks
-- Delegate work to other agents
+The Auto Router agent is the recommended choice for most interactions. It automatically:
+- Analyzes your request
+- Determines which specialist agent is best suited
+- Routes to that agent and returns the response
+- No manual routing needed!
 
-Example: Ask the Router "How do I query the database for user statistics?" and it will route to the SQL Agent.
+Example: Ask "How do I query the database for user statistics?" and it will automatically route to the SQL Agent.
+
+### Router/Planner Agent
+
+The Router/Planner agent is for advanced users who want to:
+- Plan complex multi-step tasks
+- Coordinate multiple agents manually
+- Get detailed execution plans
+- Delegate work explicitly to other agents
 
 ## Configuration
 
@@ -138,19 +148,50 @@ docker compose restart
 
 ### OpenWebUI doesn't show agents
 
-1. Check that the API service is running:
+The pipeline should be automatically loaded at startup. If agents don't appear:
+
+1. **Check that the API service is running:**
 ```bash
 curl http://localhost:8000/health
 ```
 
-2. Check OpenWebUI logs:
+2. **Check OpenWebUI logs for pipeline loading:**
 ```bash
-docker compose logs openwebui
+docker compose logs openwebui | grep -i pipeline
 ```
 
-3. Verify the pipe is installed:
-   - The pipe should be automatically mounted at container startup
-   - Check `/app/backend/data/functions/multi_agent_pipe.py` in the container
+3. **Verify the pipeline is mounted correctly:**
+```bash
+docker compose exec openwebui ls -la /app/backend/data/functions/
+```
+   You should see `multi_agent_pipeline.py` in the list.
+
+4. **Restart OpenWebUI if needed:**
+```bash
+docker compose restart openwebui
+```
+
+5. **If still not showing, check for errors:**
+```bash
+docker compose logs openwebui | tail -50
+```
+
+### Agents show "missing arguments" error
+
+If you see an error like "Pipe.pipe() missing 3 required positional arguments":
+
+1. **This has been fixed** - the pipeline now uses the correct `Pipeline` class name and interface
+2. **Ensure you're running the latest version:**
+```bash
+docker compose down
+docker compose up --build
+```
+
+3. **Clear OpenWebUI cache if needed:**
+```bash
+docker compose down -v
+docker compose up --build
+```
 
 ### Agent responses are slow
 
