@@ -64,16 +64,20 @@ class OpenAIProvider:
         logger.debug(f"OpenAI request messages: {messages}")
         
         try:
+            # Build API parameters - only include max_tokens if it's not None
+            api_params = {
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+            }
+            if max_tokens is not None:
+                api_params["max_tokens"] = max_tokens
+            
             if stream:
                 # Streaming mode
                 logger.debug("Initiating streaming chat completion")
-                response = await self.client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    stream=True,
-                )
+                api_params["stream"] = True
+                response = await self.client.chat.completions.create(**api_params)
                 
                 chunk_count = 0
                 async for chunk in response:
@@ -91,13 +95,8 @@ class OpenAIProvider:
             else:
                 # Non-streaming mode
                 logger.debug("Initiating non-streaming chat completion")
-                response = await self.client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    stream=False,
-                )
+                api_params["stream"] = False
+                response = await self.client.chat.completions.create(**api_params)
                 
                 if response.choices and len(response.choices) > 0:
                     message = response.choices[0].message

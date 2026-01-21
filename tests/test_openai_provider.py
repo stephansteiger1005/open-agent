@@ -129,3 +129,84 @@ async def test_openai_provider_error_handling():
         with pytest.raises(RuntimeError, match="OpenAI API error"):
             async for chunk in provider.chat_completion(messages):
                 pass
+
+
+@pytest.mark.asyncio
+async def test_openai_provider_max_tokens_none_excluded():
+    """Test that max_tokens is not included in API call when None"""
+    # Set a dummy API key for testing
+    os.environ["OPENAI_API_KEY"] = "test_key_12345"
+    
+    from packages.core.openai_provider import OpenAIProvider
+    
+    # Create mock response
+    mock_choice = MagicMock()
+    mock_choice.message.content = "Test response"
+    
+    mock_response = MagicMock()
+    mock_response.choices = [mock_choice]
+    
+    with patch('packages.core.openai_provider.AsyncOpenAI') as mock_client_class:
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+        mock_client_class.return_value = mock_client
+        
+        provider = OpenAIProvider()
+        
+        messages = [{"role": "user", "content": "Hello!"}]
+        
+        # Call with max_tokens=None (default)
+        result = []
+        async for chunk in provider.chat_completion(messages, max_tokens=None, stream=False):
+            result.append(chunk)
+        
+        # Verify that create was called
+        mock_client.chat.completions.create.assert_called_once()
+        call_kwargs = mock_client.chat.completions.create.call_args.kwargs
+        
+        # Verify max_tokens is NOT in the kwargs
+        assert 'max_tokens' not in call_kwargs
+        assert call_kwargs['model'] == 'gpt-4'
+        assert call_kwargs['temperature'] == 0.7
+        assert call_kwargs['stream'] is False
+
+
+@pytest.mark.asyncio
+async def test_openai_provider_max_tokens_value_included():
+    """Test that max_tokens is included in API call when provided"""
+    # Set a dummy API key for testing
+    os.environ["OPENAI_API_KEY"] = "test_key_12345"
+    
+    from packages.core.openai_provider import OpenAIProvider
+    
+    # Create mock response
+    mock_choice = MagicMock()
+    mock_choice.message.content = "Test response"
+    
+    mock_response = MagicMock()
+    mock_response.choices = [mock_choice]
+    
+    with patch('packages.core.openai_provider.AsyncOpenAI') as mock_client_class:
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+        mock_client_class.return_value = mock_client
+        
+        provider = OpenAIProvider()
+        
+        messages = [{"role": "user", "content": "Hello!"}]
+        
+        # Call with max_tokens=1000
+        result = []
+        async for chunk in provider.chat_completion(messages, max_tokens=1000, stream=False):
+            result.append(chunk)
+        
+        # Verify that create was called
+        mock_client.chat.completions.create.assert_called_once()
+        call_kwargs = mock_client.chat.completions.create.call_args.kwargs
+        
+        # Verify max_tokens IS in the kwargs with correct value
+        assert 'max_tokens' in call_kwargs
+        assert call_kwargs['max_tokens'] == 1000
+        assert call_kwargs['model'] == 'gpt-4'
+        assert call_kwargs['temperature'] == 0.7
+        assert call_kwargs['stream'] is False
