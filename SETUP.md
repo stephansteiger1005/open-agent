@@ -14,9 +14,12 @@
 cp .env.example .env
 ```
 
-2. Edit `.env` and set your API keys (optional for development):
+2. Edit `.env` and set your API keys:
 ```bash
-OPENAI_API_KEY=your_key_here  # if using OpenAI
+# Required for OpenAI-powered agents
+OPENAI_API_KEY=your_key_here
+
+# Optional for development (defaults to mock responses if not set)
 ```
 
 3. Start the system:
@@ -31,6 +34,11 @@ docker-compose up --build
 Run the included curl examples:
 ```bash
 ./examples/curl_examples.sh
+```
+
+Run the OpenAI agent selection and chat completion example:
+```bash
+./examples/openai_agent_example.sh
 ```
 
 Or test manually:
@@ -85,12 +93,42 @@ The system consists of three main components:
 - Multi-step planning
 - Tool invocation coordination
 - Event streaming
+- **OpenAI integration for intelligent agent responses**
 
 ### 3. MCP Gateway (`apps/mcp_gateway/`)
 - Tool discovery from MCP servers
 - Schema validation
 - Tool invocation
 - Security policies
+
+## OpenAI Integration
+
+The system supports OpenAI for two key use cases:
+
+### 1. Agent Selection (Router Agent)
+The router agent uses OpenAI to intelligently classify user requests and select the most appropriate specialist agent:
+- Analyzes user intent
+- Determines which agent(s) should handle the request
+- Creates execution plans for multi-step tasks
+
+### 2. General Purpose Chat Completion
+The general purpose agent uses OpenAI for natural language interactions:
+- Answers questions
+- Engages in conversation
+- Provides helpful assistance
+
+### Configuration
+Set your OpenAI API key in `.env`:
+```bash
+OPENAI_API_KEY=sk-...your-key-here
+```
+
+If `OPENAI_API_KEY` is not set, the system falls back to mock responses for testing.
+
+### Example Usage
+See `examples/openai_agent_example.sh` for a complete demonstration of:
+- Router agent classifying a SQL query request
+- General purpose agent answering a question about microservices
 
 ## API Documentation
 

@@ -1,5 +1,6 @@
 from typing import Dict, Any, AsyncGenerator, Optional
 import uuid
+import os
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -8,6 +9,13 @@ from packages.core.models import Run, Step, ToolCall, Message, RunStatus, StepSt
 from packages.core.schemas import StreamEvent
 from .agents import get_agent_registry, Agent
 from apps.mcp_gateway.client import get_mcp_client
+
+# Import OpenAI provider if available
+try:
+    from packages.core.openai_provider import get_openai_provider
+    OPENAI_AVAILABLE = True
+except (ImportError, ValueError):
+    OPENAI_AVAILABLE = False
 
 
 class Orchestrator:
@@ -132,7 +140,54 @@ class Orchestrator:
         messages: list,
         stream: bool
     ) -> AsyncGenerator[str, None]:
-        """Simulate agent response (replace with actual LLM integration)"""
+        """Get agent response using OpenAI or fallback to mock"""
+        
+        # Check if OpenAI should be used
+        use_openai = OPENAI_AVAILABLE and os.getenv("OPENAI_API_KEY")
+        
+        if use_openai:
+            # Use OpenAI for real LLM responses
+            try:
+                provider = get_openai_provider()
+                
+                # Build messages for OpenAI API
+                api_messages = [{"role": "system", "content": agent.system_prompt}]
+                
+                # Add conversation history
+                for msg in messages:
+                    api_messages.append({
+                        "role": msg.role,
+                        "content": msg.content
+                    })
+                
+                # Get model from agent config or environment
+                model = agent.model if agent.model else os.getenv("DEFAULT_MODEL", "gpt-4")
+                
+                # Stream response from OpenAI
+                async for chunk in provider.chat_completion(
+                    messages=api_messages,
+                    model=model,
+                    stream=stream,
+                    temperature=0.7,
+                ):
+                    yield chunk
+                    
+            except Exception as e:
+                # Fall back to mock response on error
+                yield f"Error using OpenAI: {str(e)}. "
+                async for chunk in self._mock_agent_response(agent, stream):
+                    yield chunk
+        else:
+            # Fall back to mock response
+            async for chunk in self._mock_agent_response(agent, stream):
+                yield chunk
+    
+    async def _mock_agent_response(
+        self,
+        agent: Agent,
+        stream: bool
+    ) -> AsyncGenerator[str, None]:
+        """Mock agent response for testing/fallback"""
         
         # Simple mock response based on agent role
         if agent.role == "routing":
