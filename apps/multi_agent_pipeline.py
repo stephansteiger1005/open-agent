@@ -1,7 +1,7 @@
 """
-OpenWebUI Pipe for Multi-Agent System
+OpenWebUI Pipeline for Multi-Agent System
 
-This pipe integrates the multi-agent system with OpenWebUI by exposing agents as models.
+This pipeline integrates the multi-agent system with OpenWebUI by exposing agents as models.
 It provides both the router agent for intelligent coordination and individual agents
 for direct interaction.
 """
@@ -16,11 +16,11 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 
-class Pipe:
-    """OpenWebUI pipe that exposes multi-agent system as models"""
+class Pipeline:
+    """OpenWebUI pipeline that exposes multi-agent system as models"""
     
     class Valves(BaseModel):
-        """Configuration for the pipe"""
+        """Configuration for the pipeline"""
         API_BASE_URL: str = os.getenv("AGENT_API_BASE_URL", "http://localhost:8000")
         API_KEY: str = os.getenv("AGENT_API_KEY", "dev_key_123456789")
     
@@ -29,11 +29,14 @@ class Pipe:
         self.id = "multi_agent_system"
         self.name = "Multi-Agent System"
         self.valves = self.Valves()
+        
+        # Initialize pipelines list - will be updated on startup
+        self.pipelines = self._fetch_agents()
     
-    def pipes(self) -> List[dict]:
+    def _fetch_agents(self) -> List[dict]:
         """
-        Return list of available models (agents).
-        This method is called by OpenWebUI to discover available models.
+        Fetch available agents from the API and return as pipelines list.
+        This is called during initialization and can be refreshed.
         """
         try:
             response = requests.get(
@@ -44,20 +47,22 @@ class Pipe:
             response.raise_for_status()
             agents = response.json()
             
-            # Convert agents to OpenWebUI model format
-            models = []
+            # Convert agents to OpenWebUI pipeline format
+            pipelines = []
             for agent in agents:
-                models.append({
+                pipelines.append({
                     "id": agent["id"],
                     "name": agent["name"],
                 })
             
-            return models
+            logger.info(f"Loaded {len(pipelines)} agents from API")
+            return pipelines
             
         except Exception as e:
             logger.error(f"Error fetching agents: {e}")
-            # Return fallback models
+            # Return fallback pipelines
             return [
+                {"id": "auto_router", "name": "Auto Router"},
                 {"id": "router", "name": "Router/Planner"},
                 {"id": "general", "name": "General Assistant"},
                 {"id": "tool", "name": "Tool Agent"},
@@ -65,6 +70,15 @@ class Pipe:
                 {"id": "devops", "name": "DevOps Agent"},
                 {"id": "docs", "name": "Documentation Agent"},
             ]
+    
+    async def on_startup(self):
+        """Called when the server is started - refresh agent list"""
+        logger.info("Pipeline starting up, refreshing agent list...")
+        self.pipelines = self._fetch_agents()
+    
+    async def on_shutdown(self):
+        """Called when the server is stopped"""
+        logger.info("Pipeline shutting down...")
     
     def pipe(
         self, user_message: str, model_id: str, messages: List[dict], body: dict
