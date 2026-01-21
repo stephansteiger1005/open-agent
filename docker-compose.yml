@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: deploy/Dockerfile
+      network: host
     ports:
       - "8000:8000"
     environment:
@@ -26,6 +27,7 @@ services:
     build:
       context: .
       dockerfile: deploy/Dockerfile
+      network: host
     environment:
       - DATABASE_URL=sqlite:///data/app.db
       - MODEL_PROVIDER=${MODEL_PROVIDER:-openai}
