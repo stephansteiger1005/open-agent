@@ -7,9 +7,15 @@ from pathlib import Path
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/app.db")
 
 # Ensure the directory for the database file exists
-if DATABASE_URL.startswith("sqlite:///") or DATABASE_URL.startswith("sqlite+aiosqlite:///"):
-    # Extract the file path from the URL
-    db_path = DATABASE_URL.replace("sqlite:///", "").replace("sqlite+aiosqlite:///", "")
+if DATABASE_URL.startswith("sqlite+aiosqlite:///"):
+    # Extract the file path from the aiosqlite URL
+    db_path = DATABASE_URL.replace("sqlite+aiosqlite:///", "")
+    if db_path and not db_path.startswith(":memory:"):
+        db_file = Path(db_path)
+        db_file.parent.mkdir(parents=True, exist_ok=True)
+elif DATABASE_URL.startswith("sqlite:///"):
+    # Extract the file path from the sqlite URL
+    db_path = DATABASE_URL.replace("sqlite:///", "")
     if db_path and not db_path.startswith(":memory:"):
         db_file = Path(db_path)
         db_file.parent.mkdir(parents=True, exist_ok=True)
