@@ -102,7 +102,7 @@ curl -H "Authorization: Bearer dev_key_123456789" \
 
 The default setup has authentication disabled (`WEBUI_AUTH=false`) for easy testing. For production:
 
-1. Enable authentication in docker-compose.yml
+1. Enable authentication in docker compose.yml
 2. Set up user accounts in OpenWebUI
 3. Configure JWT authentication for the API
 

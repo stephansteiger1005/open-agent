@@ -78,7 +78,9 @@ class Pipe:
             Response string or generator for streaming
         """
         try:
-            # Create a new conversation
+            # Create a new conversation for this request
+            # Note: Each chat request creates a new conversation to ensure clean state
+            # For production use, consider implementing conversation reuse or cleanup
             conv_response = requests.post(
                 f"{self.valves.API_BASE_URL}/v1/conversations",
                 headers={
@@ -94,7 +96,7 @@ class Pipe:
             # Add all messages from history to the conversation
             for msg in messages:
                 if msg.get("role") in ["user", "assistant"]:
-                    requests.post(
+                    msg_response = requests.post(
                         f"{self.valves.API_BASE_URL}/v1/conversations/{conv_id}/messages",
                         headers={
                             "Authorization": f"Bearer {self.valves.API_KEY}",
@@ -106,6 +108,7 @@ class Pipe:
                         },
                         timeout=10
                     )
+                    msg_response.raise_for_status()  # Raise error if message posting fails
             
             # Determine if streaming is requested
             stream = body.get("stream", True)

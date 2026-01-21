@@ -24,7 +24,7 @@ OPENAI_API_KEY=sk-your-key-here
 
 2. Start all services including OpenWebUI:
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 3. Open OpenWebUI in your browser:
@@ -131,7 +131,7 @@ agents:
 
 After editing, restart the services:
 ```bash
-docker-compose restart
+docker compose restart
 ```
 
 ## Troubleshooting
@@ -145,7 +145,7 @@ curl http://localhost:8000/health
 
 2. Check OpenWebUI logs:
 ```bash
-docker-compose logs openwebui
+docker compose logs openwebui
 ```
 
 3. Verify the pipe is installed:
@@ -156,7 +156,7 @@ docker-compose logs openwebui
 
 1. Check OpenAI API connectivity from the container:
 ```bash
-docker-compose exec api curl https://api.openai.com/v1/models \
+docker compose exec api curl https://api.openai.com/v1/models \
   -H "Authorization: Bearer $OPENAI_API_KEY"
 ```
 
@@ -167,7 +167,7 @@ OPENAI_TIMEOUT=120
 
 3. Check logs for detailed timing information:
 ```bash
-docker-compose logs orchestrator | grep "OpenAI"
+docker compose logs orchestrator | grep "OpenAI"
 ```
 
 ### Authentication errors
@@ -176,7 +176,7 @@ The OpenWebUI interface is configured with `WEBUI_AUTH=false` for easier setup. 
 
 If you get authentication errors:
 1. Verify `API_KEYS` in `.env` matches `AGENT_API_KEY`
-2. Check API logs: `docker-compose logs api`
+2. Check API logs: `docker compose logs api`
 
 ## Advanced Usage
 
@@ -297,6 +297,6 @@ curl -X POST http://localhost:8000/v1/conversations/$CONV_ID/runs \
 ## Support
 
 For issues or questions:
-1. Check the logs: `docker-compose logs`
+1. Check the logs: `docker compose logs`
 2. Review SETUP.md for detailed configuration
 3. Check the API docs: http://localhost:8000/docs

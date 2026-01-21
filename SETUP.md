@@ -320,9 +320,9 @@ DEFAULT_MODEL=llama2
 ## Troubleshooting
 
 **Database locked errors**
-- Stop all services: `docker-compose down`
+- Stop all services: `docker compose down`
 - Remove data: `rm -rf data/`
-- Restart: `docker-compose up --build`
+- Restart: `docker compose up --build`
 
 **Authentication errors**
 - Check API_KEYS in `.env`
@@ -336,7 +336,7 @@ DEFAULT_MODEL=llama2
 - The system uses host networking mode to avoid connectivity issues in Docker/WSL environments
 - Verify `OPENAI_API_KEY` is set correctly in `.env`
 - Test API key on host: `curl https://api.openai.com/v1/models -H "Authorization: Bearer $OPENAI_API_KEY"`
-- Check logs with `docker-compose logs api` or `docker-compose logs orchestrator`
+- Check logs with `docker compose logs api` or `docker compose logs orchestrator`
 - Set `LOG_LEVEL=DEBUG` for detailed OpenAI request/response logging
 
 ## Production Deployment
