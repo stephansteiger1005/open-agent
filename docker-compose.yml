@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      network: host
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///data/app.db
+      - AUTH_MODE=apikey
+      - API_KEYS=${API_KEYS:-dev_key_123456789}
+      - MODEL_PROVIDER=${MODEL_PROVIDER:-openai}
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-gpt-4}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./data:/data
+      - ./config:/app/config
+    depends_on:
+      - db
+    command: uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --reload
+
+  orchestrator:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      network: host
+    environment:
+      - DATABASE_URL=sqlite:///data/app.db
+      - MODEL_PROVIDER=${MODEL_PROVIDER:-openai}
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-gpt-4}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./data:/data
+      - ./config:/app/config
+    depends_on:
+      - db
+    command: python -m apps.orchestrator.worker
+
+  db:
+    image: alpine:latest
+    volumes:
+      - ./data:/data
+    command: tail -f /dev/null
+
+volumes:
+  data:

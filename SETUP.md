@@ -1,0 +1,267 @@
+# Multi-Agent OpenWebUI System - Setup Guide
+
+## Quick Start
+
+### Prerequisites
+- Docker and Docker Compose
+- Python 3.11+ (for local development)
+- jq (for running curl examples)
+
+### Running with Docker
+
+1. Copy the environment template:
+```bash
+cp .env.example .env
+```
+
+2. Edit `.env` and set your API keys (optional for development):
+```bash
+OPENAI_API_KEY=your_key_here  # if using OpenAI
+```
+
+3. Start the system:
+```bash
+docker-compose up --build
+```
+
+4. The API will be available at `http://localhost:8000`
+
+### Testing the API
+
+Run the included curl examples:
+```bash
+./examples/curl_examples.sh
+```
+
+Or test manually:
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# Create a conversation
+curl -X POST http://localhost:8000/v1/conversations \
+  -H "Authorization: Bearer dev_key_123456789" \
+  -H "Content-Type: application/json" \
+  -d '{"metadata": {}}'
+```
+
+### Local Development
+
+1. Create a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Set environment variables:
+```bash
+export DATABASE_URL=sqlite:///data/app.db
+export AUTH_MODE=apikey
+export API_KEYS=dev_key_123456789
+```
+
+4. Run the API server:
+```bash
+uvicorn apps.api.main:app --reload
+```
+
+## Architecture
+
+The system consists of three main components:
+
+### 1. API Service (`apps/api/`)
+- FastAPI-based REST API
+- Handles conversations, messages, runs
+- Server-Sent Events (SSE) for streaming
+- API key authentication
+
+### 2. Orchestrator (`apps/orchestrator/`)
+- Agent routing and execution
+- Multi-step planning
+- Tool invocation coordination
+- Event streaming
+
+### 3. MCP Gateway (`apps/mcp_gateway/`)
+- Tool discovery from MCP servers
+- Schema validation
+- Tool invocation
+- Security policies
+
+## API Documentation
+
+Once running, visit:
+- API docs: `http://localhost:8000/docs`
+- Alternative docs: `http://localhost:8000/redoc`
+
+### Key Endpoints
+
+**Conversations**
+- `POST /v1/conversations` - Create conversation
+- `GET /v1/conversations/{id}` - Get conversation
+- `POST /v1/conversations/{id}/messages` - Add message
+
+**Runs**
+- `POST /v1/conversations/{id}/runs` - Execute with agent
+- `GET /v1/runs/{id}` - Get run details
+- `GET /v1/runs/{id}/steps` - Get execution steps
+
+**Agents**
+- `GET /v1/agents` - List all agents
+- `GET /v1/agents/{id}` - Get agent details
+
+**Tools**
+- `GET /v1/tools` - List available tools
+- `GET /v1/tools/{name}` - Get tool schema
+
+## Configuration
+
+### Agents (`config/agents.yaml`)
+Define your agents:
+```yaml
+agents:
+  - id: custom_agent
+    name: Custom Agent
+    role: specialist
+    system_prompt: "Your custom prompt"
+    model: gpt-4
+    allowed_tools: [tool1, tool2]
+```
+
+### Tool Policies (`config/tool_policies.yaml`)
+Configure security policies:
+```yaml
+policies:
+  - tool_pattern: "db_*"
+    rules:
+      - type: sql_safety
+        block_keywords: [DROP, DELETE]
+```
+
+## OpenWebUI Integration
+
+### As a Pipe/Plugin
+
+Create a pipe in OpenWebUI that calls this API:
+
+```python
+# openwebui_pipe.py
+import requests
+
+class MultiAgentPipe:
+    def __init__(self):
+        self.api_base = "http://localhost:8000"
+        self.api_key = "dev_key_123456789"
+    
+    def pipe(self, user_message: str, model_id: str, messages: list):
+        # Create conversation
+        conv_response = requests.post(
+            f"{self.api_base}/v1/conversations",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json={"metadata": {}}
+        )
+        conv_id = conv_response.json()["id"]
+        
+        # Add message
+        requests.post(
+            f"{self.api_base}/v1/conversations/{conv_id}/messages",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json={"role": "user", "content": user_message}
+        )
+        
+        # Create run with streaming
+        response = requests.post(
+            f"{self.api_base}/v1/conversations/{conv_id}/runs",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json={"agent_id": "router", "stream": true},
+            stream=True
+        )
+        
+        for line in response.iter_lines():
+            if line:
+                # Parse SSE and yield
+                yield line.decode()
+```
+
+## Testing
+
+Run the test suite:
+```bash
+pytest tests/ -v
+```
+
+Run specific tests:
+```bash
+pytest tests/test_core.py -v
+```
+
+## Extending the System
+
+### Adding a New Agent
+
+1. Edit `config/agents.yaml`:
+```yaml
+- id: my_agent
+  name: My Custom Agent
+  role: specialist
+  system_prompt: "Your prompt here"
+  model: ${DEFAULT_MODEL}
+  allowed_tools: []
+```
+
+2. Restart the services
+
+### Adding a New Tool
+
+1. Implement the tool in your MCP server
+2. The tool will be auto-discovered on startup
+3. Configure policies in `config/tool_policies.yaml` if needed
+
+### Custom Model Provider
+
+Set environment variables:
+```bash
+MODEL_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+DEFAULT_MODEL=llama2
+```
+
+## Troubleshooting
+
+**Database locked errors**
+- Stop all services: `docker-compose down`
+- Remove data: `rm -rf data/`
+- Restart: `docker-compose up --build`
+
+**Authentication errors**
+- Check API_KEYS in `.env`
+- Verify Authorization header format: `Bearer <key>`
+
+**Agent not found**
+- Verify agent ID in `config/agents.yaml`
+- Check for YAML syntax errors
+
+## Production Deployment
+
+1. Use PostgreSQL instead of SQLite:
+```bash
+DATABASE_URL=postgresql://user:pass@localhost/dbname
+```
+
+2. Enable JWT authentication:
+```bash
+AUTH_MODE=jwt
+JWT_SECRET=your_secret_key
+```
+
+3. Configure rate limiting and security policies
+
+4. Use a reverse proxy (nginx, Caddy) for HTTPS
+
+## License
+
+MIT License - See LICENSE file for details
