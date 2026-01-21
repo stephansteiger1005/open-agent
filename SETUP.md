@@ -24,12 +24,38 @@ OPENAI_API_KEY=your_key_here
 
 3. Start the system:
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
-4. The API will be available at `http://localhost:8000`
+4. Access the services:
+   - **OpenWebUI Interface**: `http://localhost:3000` - User-friendly chat interface with all agents
+   - **API Server**: `http://localhost:8000` - REST API for programmatic access
+   - **API Documentation**: `http://localhost:8000/docs` - Interactive API docs
 
-**Note on Networking:** The system is configured to use host networking mode (`network_mode: host`) to ensure reliable connectivity to external APIs like OpenAI, especially in WSL/Docker environments where network isolation can cause connectivity issues. This means containers share the host's network stack directly.
+**Note on Networking:** The system uses standard Docker networking for service communication. All services can communicate with each other using their service names (e.g., `api:8000`, `openwebui:8080`).
+
+## Using OpenWebUI
+
+Once the system is running, open your browser to `http://localhost:3000` to access the OpenWebUI interface.
+
+### First Time Setup
+
+1. OpenWebUI will automatically discover all available agents from the API
+2. Select an agent from the model dropdown (top of the chat interface)
+3. Start chatting!
+
+### Available Agents
+
+All agents are exposed as models in OpenWebUI:
+
+- **Router/Planner** - Intelligent task routing and coordination
+- **General Assistant** - General-purpose conversational AI
+- **Tool Agent** - Executes MCP tool calls
+- **SQL Agent** - Database queries and analysis
+- **DevOps Agent** - Infrastructure and deployment tasks
+- **Documentation Agent** - Documentation search and creation
+
+See [OPENWEBUI.md](OPENWEBUI.md) for detailed usage instructions.
 
 ### Testing the API
 
@@ -184,9 +210,30 @@ policies:
 
 ## OpenWebUI Integration
 
-### As a Pipe/Plugin
+OpenWebUI is **fully integrated** and runs automatically with `docker compose up`.
 
-Create a pipe in OpenWebUI that calls this API:
+### Quick Access
+
+- **UI**: http://localhost:3000
+- **Features**: 
+  - All agents available as models
+  - Real-time streaming responses
+  - No additional configuration needed
+  - Uses OpenAI for chat completion
+
+### How It Works
+
+The integration uses a custom pipe (`apps/openwebui_pipe.py`) that:
+1. Discovers agents from the API automatically
+2. Exposes each agent as a model in OpenWebUI
+3. Routes chat messages through the API to the orchestrator
+4. Streams responses back using OpenAI
+
+For detailed usage instructions, see [OPENWEBUI.md](OPENWEBUI.md).
+
+### Manual Integration (Advanced)
+
+If you want to set up OpenWebUI separately or customize the integration, here's the reference implementation:
 
 ```python
 # openwebui_pipe.py
