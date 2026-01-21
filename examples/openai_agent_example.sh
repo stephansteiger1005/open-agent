@@ -14,7 +14,7 @@ if ! command -v jq &> /dev/null; then
     exit 1
 fi
 
-API_BASE="http://localhost:8000"
+API_BASE="http://0.0.0.0:8000"
 API_KEY="dev_key_123456789"
 
 echo "=========================================================="
