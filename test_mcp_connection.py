@@ -7,7 +7,6 @@ import sys
 import time
 import requests
 import subprocess
-import signal
 
 def test_mcp_endpoints(base_url="http://localhost:8080"):
     """
@@ -95,13 +94,32 @@ if __name__ == "__main__":
     print("Starting MCP server...")
     server_process = subprocess.Popen(
         ["python3", "mcp_server.py"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_IGN)
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
     )
     
-    # Wait for server to start
-    time.sleep(3)
+    # Wait for server to start with health check
+    print("Waiting for server to be ready...")
+    max_attempts = 10
+    for attempt in range(max_attempts):
+        time.sleep(1)
+        try:
+            response = requests.get("http://localhost:8080/sse", timeout=1, stream=True)
+            if response.status_code == 200:
+                print("Server is ready!")
+                break
+        except requests.exceptions.RequestException:
+            pass
+        
+        if attempt == max_attempts - 1:
+            print("Server failed to start!")
+            server_process.terminate()
+            stdout, stderr = server_process.communicate(timeout=2)
+            if stderr:
+                print("\nServer stderr:", stderr.decode())
+            if stdout:
+                print("\nServer stdout:", stdout.decode())
+            sys.exit(1)
     
     try:
         # Run tests
@@ -111,4 +129,8 @@ if __name__ == "__main__":
         # Clean up
         print("\nStopping MCP server...")
         server_process.terminate()
-        server_process.wait()
+        try:
+            server_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            server_process.kill()
+            server_process.wait()
