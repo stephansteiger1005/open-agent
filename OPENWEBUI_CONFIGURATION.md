@@ -27,7 +27,7 @@ Fill in the following fields:
 | Field | Value | Description |
 |-------|-------|-------------|
 | **Type** | MCP - Streamables HTTP | Select this from the dropdown |
-| **URL** | `http://mcp-server:8080/sse` | SSE endpoint for MCP server (Docker network) |
+| **URL** | `http://mcp-server:8080` | Base URL for MCP server (Docker network) |
 | **Authentication** | None (Keine) | No authentication required |
 | **ID** | `demo-mcp-server` | Unique identifier for this connection |
 | **Name** | `Demo MCP Server` | Display name |
@@ -35,9 +35,9 @@ Fill in the following fields:
 | **Visibility** | Public (Öffentlich) | Make tools available to all users |
 
 **Important Notes:**
-- Use `http://mcp-server:8080/sse` when connecting from within the Docker network
-- Use `http://localhost:8080/sse` when connecting from your host machine
-- The `/sse` path is required for the MCP SSE transport
+- Use `http://mcp-server:8080` when connecting from within the Docker network
+- Use `http://localhost:8080` when connecting from your host machine
+- Do NOT include `/sse` in the URL - OpenWebUI will automatically append the correct paths (`/sse` for SSE stream, `/messages` for client messages)
 
 ### 4. Save Configuration
 
@@ -121,7 +121,7 @@ If the connection fails:
    ```bash
    curl http://localhost:8080/sse -H "Accept: text/event-stream"
    ```
-   This should keep the connection open and show SSE events.
+   This should keep the connection open and show SSE events. Note: The `/sse` path is used for testing only; in OpenWebUI configuration, use the base URL without `/sse`.
 
 ### Tools Not Appearing
 
@@ -130,7 +130,7 @@ If tools don't appear in OpenWebUI:
 1. Verify the connection is saved and active
 2. Refresh the OpenWebUI page
 3. Check that visibility is set to "Public"
-4. Verify the MCP server URL is correct (use `http://mcp-server:8080/sse` from Docker)
+4. Verify the MCP server URL is correct (use `http://mcp-server:8080` from Docker, without `/sse`)
 
 ### Authentication Errors
 
@@ -145,8 +145,9 @@ The demo MCP server has **no authentication**. Ensure:
 The server uses:
 - **Protocol:** Model Context Protocol (MCP) v1.7.1
 - **Transport:** SSE (Server-Sent Events)
-- **Endpoint:** `/sse`
+- **Endpoints:** `/sse` (GET - SSE stream), `/messages` (POST - client messages)
 - **Library:** Official Python MCP library (mcp==1.7.1)
+- **Note:** Configure clients with base URL only; the client automatically appends the correct endpoint paths
 
 ### Network Configuration
 
