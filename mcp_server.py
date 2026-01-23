@@ -73,6 +73,7 @@ if __name__ == "__main__":
     import uvicorn
     
     # Get the ASGI app for SSE transport
+    # sse_app() returns a Starlette ASGI application configured for MCP over SSE
     app = mcp.sse_app()
     
     # Run with uvicorn
