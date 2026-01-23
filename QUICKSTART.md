@@ -58,6 +58,8 @@ http://localhost:8080/sse
    - **Visibility**: Select "Public" (Öffentlich)
 5. **Save** the connection
 
+**For detailed configuration instructions with screenshots and troubleshooting, see [OPENWEBUI_CONFIGURATION.md](OPENWEBUI_CONFIGURATION.md).**
+
 ### Available Tools
 
 Once configured, OpenWebUI will have access to two tools:

@@ -34,8 +34,8 @@ This demo consists of just 2 Docker services:
 
 3. **Access the MCP Tools API:**
    - The tool server is available at http://localhost:8080
-   - View available tools: http://localhost:8080/tools
-   - Health check: http://localhost:8080/health
+   - SSE endpoint: http://localhost:8080/sse
+   - View the [OpenWebUI Configuration Guide](OPENWEBUI_CONFIGURATION.md) for detailed setup instructions
 
 ---
 
@@ -67,7 +67,7 @@ The MCP server will automatically expose two tools:
 - `get_weather` - Returns weather data for San Francisco
 - `get_user_info` - Returns demo user profile information
 
-**Note:** The MCP server uses the official MCP protocol over SSE transport, making it compatible with OpenWebUI and other MCP-compliant clients.
+**Note:** The MCP server uses the official MCP protocol over SSE transport, making it compatible with OpenWebUI and other MCP-compliant clients. For detailed setup instructions, see [OPENWEBUI_CONFIGURATION.md](OPENWEBUI_CONFIGURATION.md).
 
 ### Direct API Access
 
@@ -147,13 +147,14 @@ Returns information about a demo user.
 
 ```
 .
-├── docker-compose.yml      # Defines the 2 services
-├── Dockerfile.mcp          # Dockerfile for MCP server
-├── mcp_server.py           # MCP server using official mcp library v1.7.1
-├── requirements.txt        # Python dependencies (mcp==1.7.1)
-├── README.md               # This file
-├── QUICKSTART.md           # Quick start guide
-└── .env.example            # Environment variables example
+├── docker-compose.yml          # Defines the 2 services
+├── Dockerfile.mcp              # Dockerfile for MCP server
+├── mcp_server.py               # MCP server using official mcp library v1.7.1
+├── requirements.txt            # Python dependencies (mcp==1.7.1)
+├── README.md                   # This file
+├── QUICKSTART.md               # Quick start guide
+├── OPENWEBUI_CONFIGURATION.md  # Detailed OpenWebUI setup guide
+└── .env.example                # Environment variables example
 ```
 
 ---
