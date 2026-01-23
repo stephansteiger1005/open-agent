@@ -1,79 +1,42 @@
 version: "3.8"
 
 services:
-  api:
+  # MCP Server - Provides two demo tools with constant JSON data
+  mcp-server:
     build:
       context: .
-      dockerfile: deploy/Dockerfile
-      args:
-        HTTP_PROXY: ${HTTP_PROXY}
-        HTTPS_PROXY: ${HTTPS_PROXY}
-        NO_PROXY: ${NO_PROXY}
-    ports:
-      - "8000:8000"
-    environment:
-      - HTTP_PROXY=${HTTP_PROXY}
-      - HTTPS_PROXY=${HTTPS_PROXY}
-      - NO_PROXY=${NO_PROXY}
-      - DATABASE_URL=sqlite:///data/app.db
-      - AUTH_MODE=apikey
-      - API_KEYS=${API_KEYS:-dev_key_123456789}
-      - MODEL_PROVIDER=${MODEL_PROVIDER:-openai}
-      - DEFAULT_MODEL=${DEFAULT_MODEL:-gpt-4}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-    volumes:
-      - ./data:/data
-      - ./config:/app/config
-    command: uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --reload
-    dns:
-      - 1.1.1.1
-      - 8.8.8.8
+      dockerfile: Dockerfile.mcp
+    container_name: demo-mcp-server
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
 
-  orchestrator:
-    build:
-      context: .
-      dockerfile: deploy/Dockerfile
-      args:
-        HTTP_PROXY: ${HTTP_PROXY}
-        HTTPS_PROXY: ${HTTPS_PROXY}
-        NO_PROXY: ${NO_PROXY}
-    environment:
-      - HTTP_PROXY=${HTTP_PROXY}
-      - HTTPS_PROXY=${HTTPS_PROXY}
-      - NO_PROXY=${NO_PROXY}
-      - DATABASE_URL=sqlite:///data/app.db
-      - MODEL_PROVIDER=${MODEL_PROVIDER:-openai}
-      - DEFAULT_MODEL=${DEFAULT_MODEL:-gpt-4}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-    volumes:
-      - ./data:/data
-      - ./config:/app/config
-    command: python -m apps.orchestrator.worker
-    dns:
-      - 1.1.1.1
-      - 8.8.8.8
-
+  # OpenWebUI - Chat interface with MCP integration
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
+    container_name: demo-openwebui
     ports:
       - "3000:8080"
     environment:
-      - WEBUI_AUTH=false  # Disable authentication for easier setup
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      # Note: The following OpenAI config is for OpenWebUI's built-in OpenAI support
-      # Our agents are exposed via the custom pipe (multi_agent_pipe.py) instead
-      - ENABLE_OPENAI_API=true
-      - OPENAI_API_BASE_URL=http://api:8000/v1
+      # Disable authentication for demo
+      - WEBUI_AUTH=false
+      
+      # No external models - using tools only
+      - ENABLE_OPENAI_API=false
+      - ENABLE_OLLAMA_API=false
+      
+      # User preconfiguration
+      - DEFAULT_USER_ROLE=admin
+      - ENABLE_SIGNUP=false
+      
+      # MCP Configuration
+      - ENABLE_MCP=true
+      - MCP_SERVERS=demo-mcp-server
     volumes:
       - openwebui_data:/app/backend/data
-      - ./apps/multi_agent_pipeline.py:/app/backend/data/functions/multi_agent_pipeline.py
     depends_on:
-      - api
-    dns:
-      - 1.1.1.1
-      - 8.8.8.8
+      - mcp-server
+    restart: unless-stopped
 
 volumes:
   openwebui_data:
