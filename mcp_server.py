@@ -70,4 +70,10 @@ def get_user_info() -> str:
 if __name__ == "__main__":
     # Run the MCP server with SSE transport
     # The server will be accessible at http://0.0.0.0:8080
-    mcp.run(transport="sse", host="0.0.0.0", port=8080)
+    import uvicorn
+    
+    # Get the ASGI app for SSE transport
+    app = mcp.sse_app()
+    
+    # Run with uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8080)
