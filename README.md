@@ -34,8 +34,8 @@ This demo consists of just 2 Docker services:
 
 3. **Access the MCP Tools API:**
    - The tool server is available at http://localhost:8080
-   - View available tools: http://localhost:8080/tools
-   - Health check: http://localhost:8080/health
+   - SSE endpoint: http://localhost:8080/sse
+   - View the [OpenWebUI Configuration Guide](OPENWEBUI_CONFIGURATION.md) for detailed setup instructions
 
 ---
 
@@ -43,36 +43,50 @@ This demo consists of just 2 Docker services:
 
 ### Integration with OpenWebUI
 
-The MCP server provides a REST API that can be integrated with OpenWebUI. The specific integration method depends on your OpenWebUI version:
+The MCP server uses the official Model Context Protocol (MCP) Python library and provides tools via SSE (Server-Sent Events) transport, which is compatible with OpenWebUI's MCP integration.
 
-- **For OpenWebUI v0.7.0+**: Use the Functions/Tools feature to create custom functions that call the MCP server API
-- **Internal Docker Network**: The MCP server is accessible at `http://mcp-server:8080` from within the Docker network
-- **External Access**: From your host machine, access the API at `http://localhost:8080`
+**OpenWebUI Configuration:**
 
-**Note:** This demo provides a standalone tool server. Integrating it with OpenWebUI requires configuring custom functions/tools in OpenWebUI's interface. See OpenWebUI's documentation for details on adding custom tools.
+To connect OpenWebUI to the MCP server:
+
+1. **Access OpenWebUI** at http://localhost:3000
+2. **Navigate to** "Externe Werkzeuge" (External Tools) in the settings
+3. **Click** "Verbindung hinzufügen" (Add Connection)
+4. **Configure the connection** with the following settings:
+   - **Type**: MCP - Streamables HTTP
+   - **URL**: `http://mcp-server:8080/sse` (from within Docker network)
+     - Or `http://localhost:8080/sse` (from host machine)
+   - **Authentication**: None (Keine)
+   - **ID**: `demo-mcp-server` (or any unique identifier)
+   - **Name**: `Demo MCP Server`
+   - **Description**: `Demo MCP server with weather and user info tools`
+   - **Visibility**: Public (Öffentlich)
+5. **Save** the configuration
+
+The MCP server will automatically expose two tools:
+- `get_weather` - Returns weather data for San Francisco
+- `get_user_info` - Returns demo user profile information
+
+**Note:** The MCP server uses the official MCP protocol over SSE transport, making it compatible with OpenWebUI and other MCP-compliant clients. For detailed setup instructions, see [OPENWEBUI_CONFIGURATION.md](OPENWEBUI_CONFIGURATION.md).
 
 ### Direct API Access
 
-You can test and use the tools directly via the REST API using curl or any HTTP client:
+The MCP server uses the official Model Context Protocol over SSE (Server-Sent Events) transport. While primarily designed for MCP clients like OpenWebUI, you can also interact with it using standard MCP client libraries.
 
-**Get Weather Data:**
+**Testing the Server:**
+
+You can verify the server is running by checking the SSE endpoint:
+
 ```bash
-curl -X POST http://localhost:8080/execute \
-  -H "Content-Type: application/json" \
-  -d '{"tool": "get_weather"}'
+# Test SSE endpoint (will keep connection open)
+curl http://localhost:8080/sse -H "Accept: text/event-stream"
 ```
 
-**Get User Info:**
-```bash
-curl -X POST http://localhost:8080/execute \
-  -H "Content-Type: application/json" \
-  -d '{"tool": "get_user_info"}'
-```
+**Available Tools:**
+- `get_weather` - Returns current weather information for San Francisco
+- `get_user_info` - Returns demo user profile information
 
-**List Available Tools:**
-```bash
-curl http://localhost:8080/tools
-```
+To interact with the tools, use an MCP-compatible client or OpenWebUI's external tools feature.
 
 ---
 
@@ -84,11 +98,11 @@ curl http://localhost:8080/tools
 │  (Chat UI)      │  
 └────────┬────────┘
          │
-         │ HTTP API
+         │ MCP over SSE (http://mcp-server:8080/sse)
          │
 ┌────────▼────────┐
 │   MCP Server    │  http://localhost:8080
-│   (FastAPI)     │
+│  (FastMCP/SSE)  │
 │                 │
 │  • get_weather  │  Returns demo weather data
 │  • get_user_info│  Returns demo user data
@@ -99,75 +113,33 @@ curl http://localhost:8080/tools
 
 ## MCP Tools
 
+The server exposes two tools via the Model Context Protocol:
+
 ### get_weather
 Returns current weather information for San Francisco.
 
-**Endpoint:** `POST /execute`
+**Tool Name:** `get_weather`
 
-**Request:**
-```json
-{
-  "tool": "get_weather"
-}
-```
+**Parameters:** None
 
-**Response:**
-```json
-{
-  "success": true,
-  "result": {
-    "location": "San Francisco, CA",
-    "temperature": 72,
-    "unit": "fahrenheit",
-    "conditions": "Sunny",
-    "humidity": 65,
-    "wind_speed": 8,
-    "wind_direction": "NW",
-    "forecast": [
-      {
-        "day": "Today",
-        "high": 75,
-        "low": 58,
-        "conditions": "Sunny"
-      }
-    ]
-  }
-}
-```
+**Returns:** JSON string with weather data including:
+- Current temperature and conditions
+- Humidity and wind information  
+- 3-day forecast
 
 ### get_user_info
 Returns information about a demo user.
 
-**Endpoint:** `POST /execute`
+**Tool Name:** `get_user_info`
 
-**Request:**
-```json
-{
-  "tool": "get_user_info"
-}
-```
+**Parameters:** None
 
-**Response:**
-```json
-{
-  "success": true,
-  "result": {
-    "id": "user-12345",
-    "name": "John Doe",
-    "email": "john.doe@example.com",
-    "role": "Developer",
-    "department": "Engineering",
-    "projects": [
-      {
-        "id": "proj-1",
-        "name": "MCP Demo",
-        "role": "Lead Developer"
-      }
-    ],
-    "skills": ["Python", "JavaScript", "Docker", "FastAPI"]
-  }
-}
-```
+**Returns:** JSON string with user data including:
+- User profile information
+- Associated projects
+- Skills and preferences
+
+**Note:** These tools are accessible through MCP-compatible clients like OpenWebUI. The server uses the official MCP Python library (v1.7.1) with SSE transport.
 
 ---
 
@@ -175,13 +147,14 @@ Returns information about a demo user.
 
 ```
 .
-├── docker-compose.yml      # Defines the 2 services
-├── Dockerfile.mcp          # Dockerfile for MCP server
-├── mcp_server.py           # Simple MCP server implementation (FastAPI)
-├── README.md               # This file
-├── QUICKSTART.md           # Quick start guide
-├── .env.example            # Environment variables example
-└── requirements.txt        # Python dependencies (for reference)
+├── docker-compose.yml          # Defines the 2 services
+├── Dockerfile.mcp              # Dockerfile for MCP server
+├── mcp_server.py               # MCP server using official mcp library v1.7.1
+├── requirements.txt            # Python dependencies (mcp==1.7.1)
+├── README.md                   # This file
+├── QUICKSTART.md               # Quick start guide
+├── OPENWEBUI_CONFIGURATION.md  # Detailed OpenWebUI setup guide
+└── .env.example                # Environment variables example
 ```
 
 ---
@@ -207,23 +180,17 @@ To add more tools to the MCP server:
 
 1. Edit `mcp_server.py`
 2. Add constant data for your tool (similar to `WEATHER_DATA` and `USER_INFO_DATA`)
-3. Add tool definition in `list_tools()` function:
+3. Add a new function decorated with `@mcp.tool()`:
    ```python
-   {
-       "name": "your_tool_name",
-       "description": "Description of what your tool does",
-       "parameters": {}
-   }
+   @mcp.tool()
+   def your_tool_name(param1: str, param2: int) -> str:
+       """Description of what your tool does"""
+       # Your tool logic here
+       return json.dumps(YOUR_TOOL_DATA, indent=2)
    ```
-4. Add tool implementation in `execute_tool()` function:
-   ```python
-   elif request.tool == "your_tool_name":
-       return ToolResponse(
-           success=True,
-           result=YOUR_TOOL_DATA
-       )
-   ```
-5. Rebuild and restart: `docker compose up --build`
+4. Rebuild and restart: `docker compose up --build`
+
+The tool will automatically be available to MCP clients like OpenWebUI.
 
 ### Customizing Data
 
@@ -251,7 +218,8 @@ docker compose logs
 
 **MCP server not responding:**
 ```bash
-curl http://localhost:8080/health
+# Test the SSE endpoint
+curl http://localhost:8080/sse -H "Accept: text/event-stream"
 ```
 
 **OpenWebUI not loading:**

@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 """
-Simple MCP-style tool server with two constant data tools for demo purposes.
-This provides a REST API that OpenWebUI can call.
+MCP Server using the official Model Context Protocol Python library.
+This server provides two demo tools that can be used by OpenWebUI and other MCP clients.
 """
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Dict, Any, List
-import uvicorn
+import json
+from mcp.server.fastmcp import FastMCP
 
-app = FastAPI(title="Demo MCP Tool Server")
-
+# Create MCP server with no authentication
+mcp = FastMCP("Demo MCP Server")
 
 # Constant data for tools
 WEATHER_DATA = {
@@ -49,70 +47,34 @@ USER_INFO_DATA = {
 }
 
 
-class ToolRequest(BaseModel):
-    tool: str
-    arguments: Dict[str, Any] = {}
+@mcp.tool()
+def get_weather() -> str:
+    """Get current weather information for San Francisco.
+    
+    Returns constant demo data including temperature, conditions, humidity,
+    wind information, and a 3-day forecast.
+    """
+    return json.dumps(WEATHER_DATA, indent=2)
 
 
-class ToolResponse(BaseModel):
-    success: bool
-    result: Any
-
-
-@app.get("/")
-async def root():
-    """Root endpoint with server info."""
-    return {
-        "name": "Demo MCP Tool Server",
-        "version": "1.0.0",
-        "tools": ["get_weather", "get_user_info"]
-    }
-
-
-@app.get("/tools")
-async def list_tools():
-    """List all available tools."""
-    return {
-        "tools": [
-            {
-                "name": "get_weather",
-                "description": "Get current weather information for San Francisco. Returns constant demo data including temperature, conditions, and 3-day forecast.",
-                "parameters": {}
-            },
-            {
-                "name": "get_user_info",
-                "description": "Get information about the current user. Returns constant demo data including profile, projects, and preferences.",
-                "parameters": {}
-            }
-        ]
-    }
-
-
-@app.post("/execute", response_model=ToolResponse)
-async def execute_tool(request: ToolRequest):
-    """Execute a tool and return its result."""
-    if request.tool == "get_weather":
-        return ToolResponse(
-            success=True,
-            result=WEATHER_DATA
-        )
-    elif request.tool == "get_user_info":
-        return ToolResponse(
-            success=True,
-            result=USER_INFO_DATA
-        )
-    else:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Unknown tool: {request.tool}"
-        )
-
-
-@app.get("/health")
-async def health():
-    """Health check endpoint."""
-    return {"status": "healthy"}
+@mcp.tool()
+def get_user_info() -> str:
+    """Get information about the current user.
+    
+    Returns constant demo data including user profile, projects, skills,
+    and preferences.
+    """
+    return json.dumps(USER_INFO_DATA, indent=2)
 
 
 if __name__ == "__main__":
+    # Run the MCP server with SSE transport
+    # The server will be accessible at http://0.0.0.0:8080
+    import uvicorn
+    
+    # Get the ASGI app for SSE transport
+    # sse_app() returns a Starlette ASGI application configured for MCP over SSE
+    app = mcp.sse_app()
+    
+    # Run with uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8080)

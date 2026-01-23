@@ -14,7 +14,7 @@ docker compose up --build
 ```
 
 This will:
-- Build the MCP server with 2 demo tools
+- Build the MCP server using the official mcp library (v1.7.1)
 - Pull and start OpenWebUI
 - Configure everything automatically
 
@@ -30,80 +30,62 @@ http://localhost:3000
 
 No login required - the demo runs in open mode!
 
-### MCP Server (Tool API)
-The tool server is available at:
+### MCP Server (Tool Server)
+The MCP server is available at:
 ```
 http://localhost:8080
 ```
 
-Check available tools:
+The server uses the Model Context Protocol over SSE transport at:
 ```
-http://localhost:8080/tools
+http://localhost:8080/sse
 ```
 
-## Step 3: Try the MCP Tools
+## Step 3: Configure OpenWebUI to Use MCP Tools
 
-### Option A: Using the API Directly
+### Connecting OpenWebUI to the MCP Server
 
-**Test the weather tool:**
+1. **Open OpenWebUI** at http://localhost:3000
+2. **Navigate to Settings** and find "Externe Werkzeuge" (External Tools)
+3. **Click** "Verbindung hinzufügen" (Add Connection)
+4. **Configure** the MCP connection:
+   - **Type**: Select "MCP - Streamables HTTP"
+   - **URL**: Enter `http://mcp-server:8080/sse`
+   - **Authentication**: Select "None" (Keine)
+   - **ID**: `demo-mcp-server`
+   - **Name**: `Demo MCP Server`
+   - **Description**: `Demo MCP server with weather and user info tools`
+   - **Visibility**: Select "Public" (Öffentlich)
+5. **Save** the connection
+
+**For detailed configuration instructions with screenshots and troubleshooting, see [OPENWEBUI_CONFIGURATION.md](OPENWEBUI_CONFIGURATION.md).**
+
+### Available Tools
+
+Once configured, OpenWebUI will have access to two tools:
+- **get_weather** - Returns weather data for San Francisco
+- **get_user_info** - Returns demo user profile information
+
+You can now use these tools in your chats by asking the AI to use them!
+
+## Testing the MCP Server
+
+### Verify Server is Running
+
 ```bash
-curl -X POST http://localhost:8080/execute \
-  -H "Content-Type: application/json" \
-  -d '{"tool": "get_weather"}'
+# Test the SSE endpoint (will keep connection open)
+curl http://localhost:8080/sse -H "Accept: text/event-stream"
 ```
 
-**Test the user info tool:**
-```bash
-curl -X POST http://localhost:8080/execute \
-  -H "Content-Type: application/json" \
-  -d '{"tool": "get_user_info"}'
-```
-
-**List all available tools:**
-```bash
-curl http://localhost:8080/tools
-```
-
-### Option B: Using OpenWebUI
-
-The tools are accessible via the MCP server API endpoint configured in OpenWebUI. You can integrate them through OpenWebUI's function/tool system depending on your OpenWebUI version.
+Press Ctrl+C to stop the curl command.
 
 ## That's It!
 
 You now have:
-- ✅ A working MCP server with 2 tools returning constant JSON data
-- ✅ OpenWebUI running and accessible
-- ✅ A clean, minimal demo setup
-
-## Testing the Tools
-
-### Weather Tool Response
-```json
-{
-  "success": true,
-  "result": {
-    "location": "San Francisco, CA",
-    "temperature": 72,
-    "conditions": "Sunny",
-    "humidity": 65,
-    "forecast": [...]
-  }
-}
-```
-
-### User Info Tool Response
-```json
-{
-  "success": true,
-  "result": {
-    "id": "user-12345",
-    "name": "John Doe",
-    "email": "john.doe@example.com",
-    "role": "Developer",
-    "projects": [...]
-  }
-}
-```
+- ✅ A working MCP server using the official mcp library (v1.7.1)
+- ✅ MCP server with 2 tools accessible via SSE transport
+- ✅ OpenWebUI running and ready to connect to the MCP server
+- ✅ A clean, minimal demo setup following MCP protocol standards
 
 ## Stopping the Demo
 
@@ -117,12 +99,12 @@ docker compose down
 **Add your own tools:**
 1. Edit `mcp_server.py`
 2. Add constant data for your tool
-3. Add tool definition in `list_tools()`
-4. Add tool handler in `execute_tool()`
-5. Rebuild: `docker compose up --build`
+3. Add a new function decorated with `@mcp.tool()`
+4. Rebuild: `docker compose up --build`
+5. The new tool will automatically be available in OpenWebUI
 
 **Explore the code:**
-- `mcp_server.py` - Simple FastAPI server with 2 tools
+- `mcp_server.py` - MCP server using official mcp library
 - `docker-compose.yml` - Service configuration
 - `Dockerfile.mcp` - MCP server container definition
 
