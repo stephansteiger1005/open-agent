@@ -34,7 +34,6 @@ This demo consists of just 2 Docker services:
 
 3. **Access the MCP Tools API:**
    - The tool server is available at http://localhost:8080
-   - SSE endpoint: http://localhost:8080/sse
    - View the [OpenWebUI Configuration Guide](OPENWEBUI_CONFIGURATION.md) for detailed setup instructions
 
 ---
@@ -54,8 +53,9 @@ To connect OpenWebUI to the MCP server:
 3. **Click** "Verbindung hinzufügen" (Add Connection)
 4. **Configure the connection** with the following settings:
    - **Type**: MCP - Streamables HTTP
-   - **URL**: `http://mcp-server:8080/sse` (from within Docker network)
-     - Or `http://localhost:8080/sse` (from host machine)
+   - **URL**: `http://mcp-server:8080` (from within Docker network)
+     - Or `http://localhost:8080` (from host machine)
+     - **Important**: Use base URL without `/sse` - OpenWebUI automatically appends the correct paths
    - **Authentication**: None (Keine)
    - **ID**: `demo-mcp-server` (or any unique identifier)
    - **Name**: `Demo MCP Server`
@@ -98,12 +98,18 @@ To interact with the tools, use an MCP-compatible client or OpenWebUI's external
 │  (Chat UI)      │  
 └────────┬────────┘
          │
-         │ MCP over SSE (http://mcp-server:8080/sse)
+         │ MCP over SSE (http://mcp-server:8080)
+         │ Auto-appends: /sse (GET), /messages (POST)
          │
 ┌────────▼────────┐
 │   MCP Server    │  http://localhost:8080
 │  (FastMCP/SSE)  │
 │                 │
+│  Endpoints:     │
+│  • GET /sse     │  SSE stream for server→client
+│  • POST /messages│ Client messages
+│                 │
+│  Tools:         │
 │  • get_weather  │  Returns demo weather data
 │  • get_user_info│  Returns demo user data
 └─────────────────┘

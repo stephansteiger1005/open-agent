@@ -36,10 +36,13 @@ The MCP server is available at:
 http://localhost:8080
 ```
 
-The server uses the Model Context Protocol over SSE transport at:
-```
-http://localhost:8080/sse
-```
+**For OpenWebUI configuration**, use the base URL above (without `/sse`).
+
+The server provides these endpoints:
+- GET `/sse` - SSE stream for server-to-client messages
+- POST `/messages` - Client-to-server messages
+
+OpenWebUI automatically appends the correct paths.
 
 ## Step 3: Configure OpenWebUI to Use MCP Tools
 
@@ -50,7 +53,7 @@ http://localhost:8080/sse
 3. **Click** "Verbindung hinzufügen" (Add Connection)
 4. **Configure** the MCP connection:
    - **Type**: Select "MCP - Streamables HTTP"
-   - **URL**: Enter `http://mcp-server:8080/sse`
+   - **URL**: Enter `http://mcp-server:8080` (base URL without `/sse`)
    - **Authentication**: Select "None" (Keine)
    - **ID**: `demo-mcp-server`
    - **Name**: `Demo MCP Server`
