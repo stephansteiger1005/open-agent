@@ -1,226 +1,268 @@
 # open-agent
-## Project: Multi-Agent OpenWebUI Instance (MCP + REST)
+## Demo Project: OpenWebUI with MCP Tools
 
-Build a production-ready multi-agent system inside/alongside OpenWebUI that orchestrates specialized agents via the Model Context Protocol (MCP) and exposes a clean REST API for external integrations. The system must support routing, tool access, memory, and streaming responses, and run locally with Docker.
-
----
-
-## Goals
-
-- Provide multi-agent orchestration for OpenWebUI chats (planner/router + specialist agents).
-- Use MCP servers as the standard way to expose tools/capabilities (DB, web, files, calendar, etc.).
-- Offer a REST API to:
-  - start conversations
-  - send messages
-  - stream tokens/events
-  - inspect runs, steps, tool calls
-  - manage agent registry and policies
-- Be ready to run: docker-compose, env templates, sensible defaults, test suite.
+A simplified demo showing OpenWebUI integrated with MCP (Model Context Protocol) tools. This project demonstrates how to connect OpenWebUI with custom tools that provide constant demo data.
 
 ---
 
-## Core Concepts
+## What's Included
 
-### Agents
-Each agent is a stateless service with:
-- id, name, role
-- system_prompt
-- model (or model selector)
-- allowed_tools (MCP tool allowlist)
-- optional policies (data redaction, SQL safety, etc.)
+This demo consists of just 2 Docker services:
 
-Required agents:
-1. Router/Planner – decides which agent(s) should act, creates a plan, delegates tasks. **Uses OpenAI for intelligent classification and agent selection.**
-2. General Assistant – default conversational agent. **Uses OpenAI for natural language chat completion.**
-3. Tool Agent – executes MCP tool calls safely (optionally separated for security).
-4. Domain Specialists – e.g. sql-agent, devops-agent, docs-agent.
+1. **OpenWebUI** - A user-friendly chat interface
+   - No external models required
+   - Pre-configured for demo use
+   - MCP tools integration enabled
+   - Accessible at http://localhost:3000
 
-### MCP Integration
-- Connect to one or more MCP servers (stdio or HTTP transport).
-- Discover tools dynamically via MCP and map them into a unified tool registry.
-- Enforce per-agent allowlists and argument validation.
-
-### Orchestration
-Run loop:
-1. receive user message
-2. router produces plan (single-agent or multi-step) **using OpenAI for intelligent decision-making**
-3. execute steps:
-   - model calls **via OpenAI API**
-   - tool calls via MCP
-   - intermediate state updates
-4. stream events and finalize response
-
-### Persistence
-Store:
-- conversations
-- messages
-- runs
-- steps
-- tool_calls  
-SQLite by default, Postgres optional.
+2. **MCP Server** - Provides two demo tools:
+   - `get_weather` - Returns constant weather data for San Francisco
+   - `get_user_info` - Returns constant user profile information
 
 ---
 
-## System Architecture
+## Quick Start
 
-### Services (Docker)
-- api (FastAPI or similar)
-  - REST endpoints
-  - SSE/WebSocket streaming
-  - auth middleware
-- orchestrator
-  - routing/planning
-  - agent execution
-  - MCP tool invocation
-- mcp-gateway (optional)
-  - manages MCP server connections
-  - caches tool schemas
-  - applies security controls
-- db (sqlite volume or postgres)
-- **openwebui**
-  - **User-friendly chat interface**
-  - **Multi-agent model selection**
-  - **Real-time streaming responses**
-  - **Available at http://localhost:3000**
+1. **Start the services:**
+   ```bash
+   docker compose up --build
+   ```
 
-OpenWebUI integration:
-- **Fully integrated** - OpenWebUI runs as a service with automatic agent discovery
-- Plugin/Pipe: OpenWebUI calls this REST API as backend agent runtime
-- All agents exposed as selectable models in the UI
-- See [OPENWEBUI.md](OPENWEBUI.md) for detailed usage instructions
+2. **Access OpenWebUI:**
+   - Open your browser to http://localhost:3000
+   - No authentication required (demo mode)
+
+3. **Access the MCP Tools API:**
+   - The tool server is available at http://localhost:8080
+   - View available tools: http://localhost:8080/tools
+   - Health check: http://localhost:8080/health
 
 ---
 
-## REST API (v1)
+## Using the Tools
 
-### Conversations
-- POST /v1/conversations
-- GET /v1/conversations/{conversation_id}
-- POST /v1/conversations/{conversation_id}/messages  
-  body: { "role": "user", "content": "...", "attachments": [] }
+### Integration with OpenWebUI
 
-### Runs
-- POST /v1/conversations/{conversation_id}/runs  
-  body: { "agent_id": "router", "stream": true, "metadata": {} }
-- GET /v1/runs/{run_id}
-- GET /v1/runs/{run_id}/steps
+The MCP server provides a REST API that can be integrated with OpenWebUI. The specific integration method depends on your OpenWebUI version:
 
-### Streaming
-- GET /v1/runs/{run_id}/events (SSE)  
-Events:
-- run.started
-- step.started
-- model.delta
-- tool.call.started
-- tool.call.result
-- run.completed
-- run.failed
+- **For OpenWebUI v0.7.0+**: Use the Functions/Tools feature to create custom functions that call the MCP server API
+- **Internal Docker Network**: The MCP server is accessible at `http://mcp-server:8080` from within the Docker network
+- **External Access**: From your host machine, access the API at `http://localhost:8080`
 
-### Agents
-- GET /v1/agents
-- POST /v1/agents (admin)
-- GET /v1/agents/{agent_id}
-- PATCH /v1/agents/{agent_id} (admin)
+**Note:** This demo provides a standalone tool server. Integrating it with OpenWebUI requires configuring custom functions/tools in OpenWebUI's interface. See OpenWebUI's documentation for details on adding custom tools.
 
-### Tools
-- GET /v1/tools
-- GET /v1/tools/{tool_name}
-- POST /v1/tools/{tool_name}/invoke (admin/testing)
+### Direct API Access
 
----
+You can test and use the tools directly via the REST API using curl or any HTTP client:
 
-## Security
+**Get Weather Data:**
+```bash
+curl -X POST http://localhost:8080/execute \
+  -H "Content-Type: application/json" \
+  -d '{"tool": "get_weather"}'
+```
 
-- API key (dev), JWT (prod)
-- Per-agent tool allowlists
-- JSON schema validation for MCP arguments
-- Secret redaction in logs
-- Rate limiting for tool calls
-- Optional sandbox mode for dangerous tools
+**Get User Info:**
+```bash
+curl -X POST http://localhost:8080/execute \
+  -H "Content-Type: application/json" \
+  -d '{"tool": "get_user_info"}'
+```
+
+**List Available Tools:**
+```bash
+curl http://localhost:8080/tools
+```
 
 ---
 
-## Configuration
+## Architecture
 
-Environment:
-- DATABASE_URL=sqlite:///data/app.db
-- AUTH_MODE=apikey|jwt
-- API_KEYS=...
-- MODEL_PROVIDER=openai|ollama|azure|...
-- **OPENAI_API_KEY=...** (required for OpenAI-powered agents)
-- **OPENAI_TIMEOUT=60** (OpenAI request timeout in seconds, default: 60)
-- **LOG_LEVEL=INFO** (logging level: DEBUG, INFO, WARNING, ERROR)
-- MCP_SERVERS=...
-- DEFAULT_MODEL=...
-
-Files:
-- .env.example
-- docker-compose.yml
-- config/agents.yaml
-- config/tool_policies.yaml
-
-### Logging
-
-The system includes comprehensive logging at multiple levels:
-- **API Layer** (`apps/api/main.py`): Logs request handling, run creation, and execution
-- **Orchestrator** (`apps/orchestrator/engine.py`): Logs agent selection, run execution lifecycle, and errors
-- **OpenAI Provider** (`packages/core/openai_provider.py`): Logs all OpenAI API calls with timing, parameters, and detailed error information
-
-Set `LOG_LEVEL=DEBUG` for detailed debugging information including:
-- OpenAI request/response messages
-- Agent selection reasoning
-- Detailed error stack traces
-- Timing information for all operations
-
-When troubleshooting OpenAI timeout issues:
-1. Check logs for "OpenAI API request starting" to see parameters
-2. Look for "OpenAI API error" entries with timing and error details
-3. Adjust `OPENAI_TIMEOUT` if requests consistently timeout
-4. Verify `OPENAI_API_KEY` is correctly configured
+```
+┌─────────────────┐
+│   OpenWebUI     │  http://localhost:3000
+│  (Chat UI)      │  
+└────────┬────────┘
+         │
+         │ HTTP API
+         │
+┌────────▼────────┐
+│   MCP Server    │  http://localhost:8080
+│   (FastAPI)     │
+│                 │
+│  • get_weather  │  Returns demo weather data
+│  • get_user_info│  Returns demo user data
+└─────────────────┘
+```
 
 ---
 
-## Repository Layout
+## MCP Tools
 
-- apps/api/
-- apps/orchestrator/
-- apps/mcp_gateway/
-- packages/core/
-  - **openai_provider.py** - OpenAI integration for agent responses
-- packages/clients/
-- config/
-- tests/
-- deploy/
+### get_weather
+Returns current weather information for San Francisco.
+
+**Endpoint:** `POST /execute`
+
+**Request:**
+```json
+{
+  "tool": "get_weather"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "result": {
+    "location": "San Francisco, CA",
+    "temperature": 72,
+    "unit": "fahrenheit",
+    "conditions": "Sunny",
+    "humidity": 65,
+    "wind_speed": 8,
+    "wind_direction": "NW",
+    "forecast": [
+      {
+        "day": "Today",
+        "high": 75,
+        "low": 58,
+        "conditions": "Sunny"
+      }
+    ]
+  }
+}
+```
+
+### get_user_info
+Returns information about a demo user.
+
+**Endpoint:** `POST /execute`
+
+**Request:**
+```json
+{
+  "tool": "get_user_info"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "result": {
+    "id": "user-12345",
+    "name": "John Doe",
+    "email": "john.doe@example.com",
+    "role": "Developer",
+    "department": "Engineering",
+    "projects": [
+      {
+        "id": "proj-1",
+        "name": "MCP Demo",
+        "role": "Lead Developer"
+      }
+    ],
+    "skills": ["Python", "JavaScript", "Docker", "FastAPI"]
+  }
+}
+```
 
 ---
 
-## Implementation Notes
+## Files Structure
 
-- Typed event model for streaming (SSE)
-- Support single-agent and router→specialist flows
-- MCP flow:
-  1. discover tools + schemas
-  2. model emits tool call
-  3. validate args
-  4. invoke MCP
-  5. persist and optionally feed result back
-
----
-
-## Definition of Done
-
-- docker compose up starts a working system
-- Conversations + streaming responses work
-- At least one MCP tool works end-to-end
-- Runs and steps are persisted and inspectable
-- Core routing and tool tests pass
+```
+.
+├── docker-compose.yml      # Defines the 2 services
+├── Dockerfile.mcp          # Dockerfile for MCP server
+├── mcp_server.py           # Simple MCP server implementation (FastAPI)
+├── README.md               # This file
+├── QUICKSTART.md           # Quick start guide
+├── .env.example            # Environment variables example
+└── requirements.txt        # Python dependencies (for reference)
+```
 
 ---
 
-## Deliverables
+## Stopping the Demo
 
-- Working codebase
-- curl examples
-- **OpenAI agent selection and chat completion example**
-- OpenWebUI pipe/plugin example
-- Minimal README with setup and extension guide
+```bash
+docker compose down
+```
+
+To also remove volumes:
+```bash
+docker compose down -v
+```
+
+---
+
+## Extending the Demo
+
+### Adding More Tools
+
+To add more tools to the MCP server:
+
+1. Edit `mcp_server.py`
+2. Add constant data for your tool (similar to `WEATHER_DATA` and `USER_INFO_DATA`)
+3. Add tool definition in `list_tools()` function:
+   ```python
+   {
+       "name": "your_tool_name",
+       "description": "Description of what your tool does",
+       "parameters": {}
+   }
+   ```
+4. Add tool implementation in `execute_tool()` function:
+   ```python
+   elif request.tool == "your_tool_name":
+       return ToolResponse(
+           success=True,
+           result=YOUR_TOOL_DATA
+       )
+   ```
+5. Rebuild and restart: `docker compose up --build`
+
+### Customizing Data
+
+Edit the constant data dictionaries at the top of `mcp_server.py`:
+- `WEATHER_DATA` - Modify weather information
+- `USER_INFO_DATA` - Modify user profile data
+
+---
+
+## Requirements
+
+- Docker
+- Docker Compose
+
+No other dependencies needed - everything runs in containers!
+
+---
+
+## Troubleshooting
+
+**Services won't start:**
+```bash
+docker compose logs
+```
+
+**MCP server not responding:**
+```bash
+curl http://localhost:8080/health
+```
+
+**OpenWebUI not loading:**
+```bash
+docker compose logs openwebui
+```
+
+---
+
+## Learn More
+
+- [OpenWebUI Documentation](https://github.com/open-webui/open-webui)
+- [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)

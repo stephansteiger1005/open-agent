@@ -1,121 +1,129 @@
-# OpenWebUI Quick Start Guide
+# Quick Start Guide
 
-## 🚀 Getting Started
+Get up and running with the OpenWebUI MCP demo in 3 simple steps!
 
-1. **Start the system:**
-   ```bash
-   docker compose up --build
-   ```
+## Prerequisites
 
-2. **Wait for services to start** (usually 30-60 seconds)
+- Docker installed
+- Docker Compose installed
 
-3. **Open OpenWebUI:**
-   ```
-   http://localhost:3000
-   ```
-
-## 💬 Using the Interface
-
-### Select an Agent
-
-Click the model dropdown at the top of the chat and choose from:
-
-- **Router/Planner** - Smart routing to the right specialist agent
-- **General Assistant** - General conversation and questions
-- **SQL Agent** - Database queries and analysis
-- **DevOps Agent** - Infrastructure and deployment help
-- **Documentation Agent** - Documentation search and creation
-- **Tool Agent** - Execute MCP tools
-
-### Chat
-
-Simply type your message and press Enter. The agent will respond in real-time using OpenAI.
-
-## 🔧 Configuration
-
-All configuration is in `.env`:
+## Step 1: Start the Services
 
 ```bash
-# Required - Your OpenAI API key
-OPENAI_API_KEY=sk-your-key-here
-
-# Optional - Change the model
-DEFAULT_MODEL=gpt-4
-
-# Optional - Enable debug logging
-LOG_LEVEL=DEBUG
+docker compose up --build
 ```
 
-## 🧪 Testing
+This will:
+- Build the MCP server with 2 demo tools
+- Pull and start OpenWebUI
+- Configure everything automatically
 
-Run the integration test:
+Wait about 30 seconds for services to fully start.
+
+## Step 2: Access the Services
+
+### OpenWebUI (Chat Interface)
+Open your browser and navigate to:
+```
+http://localhost:3000
+```
+
+No login required - the demo runs in open mode!
+
+### MCP Server (Tool API)
+The tool server is available at:
+```
+http://localhost:8080
+```
+
+Check available tools:
+```
+http://localhost:8080/tools
+```
+
+## Step 3: Try the MCP Tools
+
+### Option A: Using the API Directly
+
+**Test the weather tool:**
 ```bash
-./test_openwebui.sh
+curl -X POST http://localhost:8080/execute \
+  -H "Content-Type: application/json" \
+  -d '{"tool": "get_weather"}'
 ```
 
-## 📚 Documentation
-
-- **[OPENWEBUI.md](OPENWEBUI.md)** - Detailed usage guide
-- **[SETUP.md](SETUP.md)** - Complete setup instructions
-- **[README.md](README.md)** - Project overview
-
-## ⚡ Troubleshooting
-
-**OpenWebUI not loading?**
+**Test the user info tool:**
 ```bash
-docker compose logs openwebui
+curl -X POST http://localhost:8080/execute \
+  -H "Content-Type: application/json" \
+  -d '{"tool": "get_user_info"}'
 ```
 
-**Agents not showing up?**
+**List all available tools:**
 ```bash
-# Check API is running
-curl http://localhost:8000/health
-
-# Check agents are configured
-curl -H "Authorization: Bearer dev_key_123456789" \
-     http://localhost:8000/v1/agents
+curl http://localhost:8080/tools
 ```
 
-**Slow responses?**
-- Check your OpenAI API key is valid
-- Increase timeout: `OPENAI_TIMEOUT=120` in `.env`
-- Check logs: `docker compose logs orchestrator`
+### Option B: Using OpenWebUI
 
-## 🎯 Quick Examples
+The tools are accessible via the MCP server API endpoint configured in OpenWebUI. You can integrate them through OpenWebUI's function/tool system depending on your OpenWebUI version.
 
-### Example 1: General Question
-1. Select "General Assistant"
-2. Ask: "What is the capital of France?"
-3. Get instant AI response via OpenAI
+## That's It!
 
-### Example 2: Router Agent
-1. Select "Router/Planner"
-2. Ask: "I need to query the database for user statistics"
-3. Router analyzes and delegates to SQL Agent
+You now have:
+- ✅ A working MCP server with 2 tools returning constant JSON data
+- ✅ OpenWebUI running and accessible
+- ✅ A clean, minimal demo setup
 
-### Example 3: SQL Query
-1. Select "SQL Agent"
-2. Ask: "Show me all users created in the last 30 days"
-3. Get SQL-specific assistance
+## Testing the Tools
 
-## 🔐 Security Note
+### Weather Tool Response
+```json
+{
+  "success": true,
+  "result": {
+    "location": "San Francisco, CA",
+    "temperature": 72,
+    "conditions": "Sunny",
+    "humidity": 65,
+    "forecast": [...]
+  }
+}
+```
 
-The default setup has authentication disabled (`WEBUI_AUTH=false`) for easy testing. For production:
+### User Info Tool Response
+```json
+{
+  "success": true,
+  "result": {
+    "id": "user-12345",
+    "name": "John Doe",
+    "email": "john.doe@example.com",
+    "role": "Developer",
+    "projects": [...]
+  }
+}
+```
 
-1. Enable authentication in docker compose.yml
-2. Set up user accounts in OpenWebUI
-3. Configure JWT authentication for the API
+## Stopping the Demo
 
-## 🌐 Accessing Services
+Press `Ctrl+C` in the terminal where docker compose is running, then:
+```bash
+docker compose down
+```
 
-- OpenWebUI: http://localhost:3000
-- API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
+## Next Steps
 
-## 📝 Next Steps
+**Add your own tools:**
+1. Edit `mcp_server.py`
+2. Add constant data for your tool
+3. Add tool definition in `list_tools()`
+4. Add tool handler in `execute_tool()`
+5. Rebuild: `docker compose up --build`
 
-1. Try different agents
-2. Customize system prompts in `config/agents.yaml`
-3. Add your own specialized agents
-4. Configure MCP tools for enhanced capabilities
-5. Deploy to production (see SETUP.md)
+**Explore the code:**
+- `mcp_server.py` - Simple FastAPI server with 2 tools
+- `docker-compose.yml` - Service configuration
+- `Dockerfile.mcp` - MCP server container definition
+
+See `README.md` for detailed documentation!
