@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   # MCP Server - Provides two demo tools with constant JSON data
   mcp-server:
