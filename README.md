@@ -228,10 +228,28 @@ docker compose logs
 curl http://localhost:8080/sse -H "Accept: text/event-stream"
 ```
 
+**Verify MCP endpoint configuration:**
+```bash
+# Run the automated test script
+python3 test_mcp_connection.py
+```
+This will verify that:
+- GET /sse endpoint works (SSE stream)
+- POST /messages endpoint exists (client messages)
+- POST /sse correctly returns 405 (not the right endpoint)
+
 **OpenWebUI not loading:**
 ```bash
 docker compose logs openwebui
 ```
+
+**Connection Issues:**
+
+If you see `POST /sse HTTP/1.1" 404` or `405` errors in logs, this means:
+- The URL in OpenWebUI is incorrectly configured with `/sse` suffix
+- **Solution**: Remove `/sse` from the URL in OpenWebUI settings
+- Use `http://mcp-server:8080` (base URL only)
+- OpenWebUI will automatically append the correct paths
 
 ---
 
