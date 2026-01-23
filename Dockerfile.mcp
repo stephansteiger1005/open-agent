@@ -2,14 +2,18 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install MCP package
-RUN pip install --no-cache-dir mcp>=1.0.0
+# Install dependencies (with SSL workaround for build environment)
+RUN pip install --no-cache-dir --trusted-host pypi.org --trusted-host files.pythonhosted.org \
+    fastapi uvicorn pydantic
 
 # Copy MCP server script
 COPY mcp_server.py .
 
 # Make script executable
 RUN chmod +x mcp_server.py
+
+# Expose port
+EXPOSE 8080
 
 # Run MCP server
 CMD ["python", "mcp_server.py"]

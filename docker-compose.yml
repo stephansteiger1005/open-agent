@@ -7,11 +7,11 @@ services:
       context: .
       dockerfile: Dockerfile.mcp
     container_name: demo-mcp-server
+    ports:
+      - "8080:8080"
     restart: unless-stopped
-    stdin_open: true
-    tty: true
 
-  # OpenWebUI - Chat interface with MCP integration
+  # OpenWebUI - Chat interface with tool server backend
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
     container_name: demo-openwebui
@@ -21,17 +21,12 @@ services:
       # Disable authentication for demo
       - WEBUI_AUTH=false
       
-      # No external models - using tools only
-      - ENABLE_OPENAI_API=false
-      - ENABLE_OLLAMA_API=false
-      
       # User preconfiguration
       - DEFAULT_USER_ROLE=admin
       - ENABLE_SIGNUP=false
       
-      # MCP Configuration
-      - ENABLE_MCP=true
-      - MCP_SERVERS=demo-mcp-server
+      # Tool server configuration
+      - TOOLS_API_URL=http://mcp-server:8080
     volumes:
       - openwebui_data:/app/backend/data
     depends_on:

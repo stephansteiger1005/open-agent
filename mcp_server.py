@@ -1,19 +1,15 @@
 #!/usr/bin/env python3
 """
-Simple MCP Server with two constant data tools for demo purposes.
+Simple MCP-style tool server with two constant data tools for demo purposes.
+This provides a REST API that OpenWebUI can call.
 """
-import asyncio
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import Dict, Any, List
 import json
-from typing import Any, Dict
+import uvicorn
 
-# Install mcp if needed: pip install mcp
-try:
-    from mcp.server import Server
-    from mcp.server.stdio import stdio_server
-    from mcp.types import Tool, TextContent
-except ImportError:
-    print("Error: mcp package not found. Install with: pip install mcp")
-    exit(1)
+app = FastAPI(title="Demo MCP Tool Server")
 
 
 # Constant data for tools
@@ -54,65 +50,70 @@ USER_INFO_DATA = {
 }
 
 
-# Create MCP server instance
-app = Server("demo-mcp-server")
+class ToolRequest(BaseModel):
+    tool: str
+    arguments: Dict[str, Any] = {}
 
 
-@app.list_tools()
-async def list_tools() -> list[Tool]:
-    """List available tools."""
-    return [
-        Tool(
-            name="get_weather",
-            description="Get current weather information for San Francisco. Returns constant demo data including temperature, conditions, and 3-day forecast.",
-            inputSchema={
-                "type": "object",
-                "properties": {},
-                "required": []
+class ToolResponse(BaseModel):
+    success: bool
+    result: Any
+
+
+@app.get("/")
+async def root():
+    """Root endpoint with server info."""
+    return {
+        "name": "Demo MCP Tool Server",
+        "version": "1.0.0",
+        "tools": ["get_weather", "get_user_info"]
+    }
+
+
+@app.get("/tools")
+async def list_tools():
+    """List all available tools."""
+    return {
+        "tools": [
+            {
+                "name": "get_weather",
+                "description": "Get current weather information for San Francisco. Returns constant demo data including temperature, conditions, and 3-day forecast.",
+                "parameters": {}
+            },
+            {
+                "name": "get_user_info",
+                "description": "Get information about the current user. Returns constant demo data including profile, projects, and preferences.",
+                "parameters": {}
             }
-        ),
-        Tool(
-            name="get_user_info",
-            description="Get information about the current user. Returns constant demo data including profile, projects, and preferences.",
-            inputSchema={
-                "type": "object",
-                "properties": {},
-                "required": []
-            }
+        ]
+    }
+
+
+@app.post("/execute", response_model=ToolResponse)
+async def execute_tool(request: ToolRequest):
+    """Execute a tool and return its result."""
+    if request.tool == "get_weather":
+        return ToolResponse(
+            success=True,
+            result=WEATHER_DATA
         )
-    ]
-
-
-@app.call_tool()
-async def call_tool(name: str, arguments: Dict[str, Any]) -> list[TextContent]:
-    """Handle tool calls."""
-    if name == "get_weather":
-        return [
-            TextContent(
-                type="text",
-                text=json.dumps(WEATHER_DATA, indent=2)
-            )
-        ]
-    elif name == "get_user_info":
-        return [
-            TextContent(
-                type="text",
-                text=json.dumps(USER_INFO_DATA, indent=2)
-            )
-        ]
+    elif request.tool == "get_user_info":
+        return ToolResponse(
+            success=True,
+            result=USER_INFO_DATA
+        )
     else:
-        raise ValueError(f"Unknown tool: {name}")
-
-
-async def main():
-    """Run the MCP server."""
-    async with stdio_server() as (read_stream, write_stream):
-        await app.run(
-            read_stream,
-            write_stream,
-            app.create_initialization_options()
+        raise HTTPException(
+            status_code=404,
+            detail=f"Unknown tool: {request.tool}"
         )
+
+
+@app.get("/health")
+async def health():
+    """Health check endpoint."""
+    return {"status": "healthy"}
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    uvicorn.run(app, host="0.0.0.0", port=8080)
