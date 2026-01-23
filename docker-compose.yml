@@ -9,7 +9,10 @@ services:
       - "8080:8080"
     restart: unless-stopped
 
-  # OpenWebUI - Chat interface with tool server backend
+  # OpenWebUI - Chat interface
+  # Note: Tool integration depends on OpenWebUI version and configuration.
+  # The MCP server is accessible at http://mcp-server:8080 from within the Docker network
+  # and at http://localhost:8080 from the host machine.
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
     container_name: demo-openwebui
@@ -22,9 +25,6 @@ services:
       # User preconfiguration
       - DEFAULT_USER_ROLE=admin
       - ENABLE_SIGNUP=false
-      
-      # Tool server configuration
-      - TOOLS_API_URL=http://mcp-server:8080
     volumes:
       - openwebui_data:/app/backend/data
     depends_on:

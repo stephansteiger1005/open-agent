@@ -41,15 +41,19 @@ This demo consists of just 2 Docker services:
 
 ## Using the Tools
 
-### From OpenWebUI
+### Integration with OpenWebUI
 
-OpenWebUI can access the tools through its interface. The tools are exposed via the MCP server at `http://mcp-server:8080` (internal to Docker network).
+The MCP server provides a REST API that can be integrated with OpenWebUI. The specific integration method depends on your OpenWebUI version:
 
-**Note:** OpenWebUI's MCP integration depends on the specific version and configuration. The tools are accessible via the REST API documented below.
+- **For OpenWebUI v0.7.0+**: Use the Functions/Tools feature to create custom functions that call the MCP server API
+- **Internal Docker Network**: The MCP server is accessible at `http://mcp-server:8080` from within the Docker network
+- **External Access**: From your host machine, access the API at `http://localhost:8080`
+
+**Note:** This demo provides a standalone tool server. Integrating it with OpenWebUI requires configuring custom functions/tools in OpenWebUI's interface. See OpenWebUI's documentation for details on adding custom tools.
 
 ### Direct API Access
 
-You can test the tools directly using curl:
+You can test and use the tools directly via the REST API using curl or any HTTP client:
 
 **Get Weather Data:**
 ```bash

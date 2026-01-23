@@ -6,7 +6,6 @@ This provides a REST API that OpenWebUI can call.
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Any, List
-import json
 import uvicorn
 
 app = FastAPI(title="Demo MCP Tool Server")
