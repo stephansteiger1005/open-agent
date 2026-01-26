@@ -14,12 +14,13 @@ docker compose up --build
 ```
 
 This will:
+- Build the Ollama container with llama3 model
 - Build the MCP server using the official mcp library (v1.7.1)
 - Build the MCP to OpenAPI proxy
 - Pull and start OpenWebUI
 - Configure everything automatically
 
-Wait about 30 seconds for services to fully start.
+**Note:** On first start, Ollama will automatically pull the llama3 model, which may take 5-10 minutes depending on your internet connection. Subsequent starts will be much faster.
 
 ## Step 2: Access the Services
 
@@ -30,6 +31,16 @@ http://localhost:3000
 ```
 
 No login required - the demo runs in open mode!
+
+**Ollama with llama3 is automatically configured and ready to use.** You can start chatting immediately with the llama3 model.
+
+### Ollama (LLM Backend)
+The Ollama server with llama3 model is available at:
+```
+http://localhost:11434
+```
+
+This is automatically configured in OpenWebUI and provides the LLM backend for chat interactions.
 
 ### MCP Server (Tool Server)
 The MCP server is available at:
@@ -133,10 +144,11 @@ python3 test_proxy_api.py
 ## That's It!
 
 You now have:
+- ✅ A working Ollama instance with llama3 model for chat interactions
 - ✅ A working MCP server using the official mcp library (v1.7.1)
 - ✅ MCP server with 2 tools accessible via SSE transport
 - ✅ MCP to OpenAPI proxy exposing tools as REST endpoints
-- ✅ OpenWebUI running and ready to connect via either method
+- ✅ OpenWebUI running with Ollama configured and ready to use
 - ✅ A clean, minimal demo setup following MCP protocol standards
 
 ## Stopping the Demo

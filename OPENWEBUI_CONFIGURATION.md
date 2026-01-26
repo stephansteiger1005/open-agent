@@ -6,12 +6,19 @@ This guide explains how to configure OpenWebUI to connect to the tools using eit
 
 - Docker Compose services running: `docker compose up -d`
 - OpenWebUI accessible at http://localhost:3000
+- Ollama with llama3 model running at http://localhost:11434 (automatically configured)
 - MCP Server running at http://localhost:8080
 - MCP to OpenAPI Proxy running at http://localhost:8081
+
+**Note:** Ollama with llama3 model is automatically configured in OpenWebUI through the `OLLAMA_BASE_URL` environment variable. You can start chatting immediately without additional configuration.
 
 ## Integration Options
 
 OpenWebUI supports two methods to connect to the demo tools:
+
+### Built-in: Ollama with llama3 Model
+
+OpenWebUI is automatically configured to use Ollama with the llama3 model through the `OLLAMA_BASE_URL` environment variable. No additional configuration is needed - you can start chatting immediately!
 
 ### Option 1: Direct MCP Connection (Recommended)
 
@@ -251,12 +258,14 @@ The proxy server provides:
 ### Network Configuration
 
 Within Docker Compose:
+- Ollama: `ollama:11434`
 - MCP Server: `mcp-server:8080`
 - MCP Proxy: `mcp-proxy:8081`
 - OpenWebUI: `openwebui:8080`
 - All services are on the same Docker network
 
 From host machine:
+- Ollama: `localhost:11434`
 - MCP Server: `localhost:8080`
 - OpenWebUI: `localhost:3000`
 
@@ -284,6 +293,14 @@ mcp-server:
   environment:
     - MCP_SERVER_HOST=0.0.0.0
     - MCP_SERVER_PORT=8080
+```
+
+The Ollama instance can be configured similarly:
+
+```yaml
+ollama:
+  environment:
+    - OLLAMA_HOST=0.0.0.0:11434
 ```
 
 ## Security Considerations
