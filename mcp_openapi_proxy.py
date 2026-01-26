@@ -48,6 +48,8 @@ class ProductionMCPClient:
         self._initialized = False
         self._session: Optional[ClientSession] = None
         self._connection_task = None
+        self._shutdown_event = asyncio.Event()
+        self._init_event = asyncio.Event()
     
     async def initialize(self):
         """Initialize connection to MCP server and fetch available tools"""
@@ -64,12 +66,9 @@ class ProductionMCPClient:
             self._connection_task = asyncio.create_task(self._maintain_connection(sse_url))
             
             # Wait for initialization to complete with a timeout
-            max_wait = 30  # seconds
-            for _ in range(max_wait * 10):
-                if self._initialized:
-                    break
-                await asyncio.sleep(0.1)
-            else:
+            try:
+                await asyncio.wait_for(self._init_event.wait(), timeout=30.0)
+            except asyncio.TimeoutError:
                 raise TimeoutError("Failed to initialize MCP connection within 30 seconds")
             
             logger.info(f"MCP client initialized with {len(self.tools)} tools: {list(self.tools.keys())}")
@@ -105,16 +104,17 @@ class ProductionMCPClient:
                         }
                     
                     self._initialized = True
+                    self._init_event.set()
                     
-                    # Keep the connection alive - this will block until cleanup is called
-                    # The session stays open as long as we're in this async with block
-                    await asyncio.Event().wait()  # Wait indefinitely
+                    # Keep the connection alive - wait for shutdown signal
+                    await self._shutdown_event.wait()
                     
         except asyncio.CancelledError:
             logger.info("MCP connection task cancelled")
             raise
         except Exception as e:
             logger.error(f"Error in MCP connection: {e}", exc_info=True)
+            self._init_event.set()  # Unblock waiting tasks even on error
             raise
         finally:
             self._session = None
@@ -178,6 +178,9 @@ class ProductionMCPClient:
     async def cleanup(self):
         """Clean up MCP client resources"""
         try:
+            # Signal shutdown to the connection task
+            self._shutdown_event.set()
+            
             if self._connection_task:
                 self._connection_task.cancel()
                 try:
@@ -251,6 +254,9 @@ async def root():
 @app.get("/tools")
 async def list_tools():
     """List all available tools from the MCP server"""
+    if not mcp_client:
+        raise HTTPException(status_code=503, detail="MCP client not initialized")
+    
     try:
         tools = await mcp_client.get_tools()
         return {
@@ -272,6 +278,9 @@ async def list_tools():
 @app.post("/tools/{tool_name}")
 async def call_tool(tool_name: str, request: ToolCallRequest):
     """Call a specific tool"""
+    if not mcp_client:
+        raise HTTPException(status_code=503, detail="MCP client not initialized")
+    
     try:
         result = await mcp_client.call_tool(tool_name, request.arguments)
         return result
@@ -285,6 +294,13 @@ async def call_tool(tool_name: str, request: ToolCallRequest):
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
+    if not mcp_client:
+        return {
+            "status": "unhealthy",
+            "mcp_connected": False,
+            "error": "MCP client not initialized"
+        }
+    
     try:
         tools = await mcp_client.get_tools()
         return {
@@ -307,6 +323,9 @@ async def get_openapi_schema():
     Generate OpenAPI schema dynamically based on available MCP tools.
     This endpoint can be used by OpenWebUI to discover available tools.
     """
+    if not mcp_client:
+        raise HTTPException(status_code=503, detail="MCP client not initialized")
+    
     try:
         tools = await mcp_client.get_tools()
         
