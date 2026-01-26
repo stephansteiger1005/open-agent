@@ -137,11 +137,12 @@ class ProductionMCPClient:
         Returns:
             Dict with 'content' key containing list of content items
         """
+        # Ensure client is initialized
         if not self._initialized:
             await self.initialize()
         
-        # Check both initialized and session to avoid race condition
-        if not self._initialized or not self._session:
+        # Validate we have a valid session after initialization
+        if not self._session:
             raise RuntimeError("MCP session is not connected")
         
         if tool_name not in self.tools:
