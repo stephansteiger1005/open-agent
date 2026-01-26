@@ -27,7 +27,7 @@ if ollama pull llama3; then
     echo "Successfully pulled llama3 model!"
 else
     echo "WARNING: Failed to pull llama3 model. Please check your internet connection."
-    echo "You can manually pull the model later with: docker exec demo-ollama ollama pull llama3"
+    echo "You can manually pull the model later with: docker exec <ollama-container-name> ollama pull llama3"
     echo "Ollama will continue running, but the llama3 model may not be available."
 fi
 
