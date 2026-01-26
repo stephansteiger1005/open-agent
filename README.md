@@ -7,16 +7,21 @@ A simplified demo showing OpenWebUI integrated with MCP (Model Context Protocol)
 
 ## What's Included
 
-This demo consists of 3 Docker services:
+This demo consists of 4 Docker services:
 
 1. **OpenWebUI** - A user-friendly chat interface
-   - No external models required
+   - Integrated with Ollama for LLM capabilities
    - Pre-configured for demo use
    - MCP tools integration enabled
    - OpenAPI tools integration enabled
    - Accessible at http://localhost:3000
 
-2. **MCP Server** - Provides demo tools and prompts via MCP protocol:
+2. **Ollama** - Local LLM backend with llama3 model:
+   - Provides llama3 model for chat interactions
+   - Automatically pulls llama3 model on first start
+   - Accessible at http://localhost:11434
+
+3. **MCP Server** - Provides demo tools and prompts via MCP protocol:
    - **Tools:**
      - `get_weather` - Returns constant weather data for San Francisco
      - `get_user_info` - Returns constant user profile information
@@ -26,7 +31,7 @@ This demo consists of 3 Docker services:
      - `daily_briefing` - Template for daily summary combining weather and user info
    - Accessible at http://localhost:8080
 
-3. **MCP to OpenAPI Proxy** - Exposes MCP tools as OpenAPI/REST endpoints:
+4. **MCP to OpenAPI Proxy** - Exposes MCP tools as OpenAPI/REST endpoints:
    - Connects to the MCP server and translates MCP protocol to OpenAPI
    - Provides OpenAPI specification at `/openapi.json`
    - Interactive API docs at `/docs`
@@ -41,9 +46,12 @@ This demo consists of 3 Docker services:
    docker compose up --build
    ```
 
+   Note: On first start, Ollama will automatically pull the llama3 model, which may take a few minutes depending on your internet connection.
+
 2. **Access OpenWebUI:**
    - Open your browser to http://localhost:3000
    - No authentication required (demo mode)
+   - Ollama with llama3 model is automatically configured and ready to use
 
 3. **Access the MCP Tools API:**
    - The MCP server is available at http://localhost:8080 (MCP protocol over SSE)
@@ -166,32 +174,43 @@ To interact with the tools, use an MCP-compatible client, OpenWebUI's external t
                             │
           ┌─────────────────┼─────────────────┐
           │                 │                 │
-          │ MCP over SSE    │                 │ OpenAPI/REST
+          │ Ollama API      │                 │ MCP/OpenAPI
           │                 │                 │
 ┌─────────▼─────────┐       │       ┌─────────▼─────────┐
-│   MCP Server      │       │       │ MCP→OpenAPI Proxy │  http://localhost:8081
-│  (FastMCP/SSE)    │◄──────┘       │  (FastAPI)        │
-│                   │ MCP Protocol  │                   │
-│ http://localhost: │               │  Endpoints:       │
-│           8080    │               │  • GET  /tools    │  List tools
-│                   │               │  • POST /tools/{} │  Call tool
-│  Endpoints:       │               │  • GET  /openapi  │  OpenAPI spec
-│  • GET /sse       │               │  • GET  /docs     │  API docs
-│  • POST /messages │               │                   │
-│                   │               └───────────────────┘
-│  Tools:           │
-│  • get_weather    │  Returns demo weather data
-│  • get_user_info  │  Returns demo user data
-│                   │
-│  Prompts:         │
-│  • analyze_weather    │  Weather analysis template
-│  • review_user_profile│ User review template
-│  • daily_briefing     │ Daily summary template
-└───────────────────┘
+│     Ollama        │       │       │   MCP Server      │  http://localhost:8080
+│   (LLM Backend)   │       │       │  (FastMCP/SSE)    │
+│                   │       │       │                   │
+│ http://localhost: │       │       │  Endpoints:       │
+│          11434    │       │       │  • GET /sse       │
+│                   │       │       │  • POST /messages │
+│ Model: llama3     │       │       │                   │
+└───────────────────┘       │       │  Tools:           │
+                            │       │  • get_weather    │
+                            │       │  • get_user_info  │
+                            │       │                   │
+                            │       │  Prompts:         │
+                            │       │  • analyze_weather    │
+                            │       │  • review_user_profile│
+                            │       │  • daily_briefing     │
+                            │       └───────────┬───────┘
+                            │                   │
+                            │ OpenAPI/REST      │ MCP Protocol
+                            │                   │
+                  ┌─────────▼───────────────────▼─────────┐
+                  │       MCP→OpenAPI Proxy               │  http://localhost:8081
+                  │         (FastAPI)                     │
+                  │                                       │
+                  │  Endpoints:                           │
+                  │  • GET  /tools      List tools        │
+                  │  • POST /tools/{}   Call tool         │
+                  │  • GET  /openapi    OpenAPI spec      │
+                  │  • GET  /docs       API docs          │
+                  └───────────────────────────────────────┘
 
 Integration Options:
-1. Direct MCP: OpenWebUI → MCP Server (MCP protocol over SSE)
-2. Via Proxy: OpenWebUI → OpenAPI Proxy → MCP Server (REST → MCP)
+1. Chat with Ollama: OpenWebUI → Ollama (LLM responses with llama3 model)
+2. Direct MCP: OpenWebUI → MCP Server (MCP protocol over SSE)
+3. Via Proxy: OpenWebUI → OpenAPI Proxy → MCP Server (REST → MCP)
 ```
 
 ---
@@ -268,7 +287,9 @@ Generates a prompt for creating a comprehensive daily briefing.
 
 ```
 .
-├── docker-compose.yml          # Defines the 3 services
+├── docker-compose.yml          # Defines the 4 services (Ollama, OpenWebUI, MCP Server, MCP Proxy)
+├── Dockerfile.ollama           # Dockerfile for Ollama with llama3 model
+├── ollama-entrypoint.sh        # Entrypoint script to pull llama3 model
 ├── Dockerfile.mcp              # Dockerfile for MCP server
 ├── Dockerfile.proxy            # Dockerfile for OpenAPI proxy
 ├── mcp_server.py               # MCP server using official mcp library v1.7.1
