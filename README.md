@@ -15,9 +15,14 @@ This demo consists of just 2 Docker services:
    - MCP tools integration enabled
    - Accessible at http://localhost:3000
 
-2. **MCP Server** - Provides two demo tools:
-   - `get_weather` - Returns constant weather data for San Francisco
-   - `get_user_info` - Returns constant user profile information
+2. **MCP Server** - Provides demo tools and prompts:
+   - **Tools:**
+     - `get_weather` - Returns constant weather data for San Francisco
+     - `get_user_info` - Returns constant user profile information
+   - **Prompts:**
+     - `analyze_weather` - Template for weather analysis
+     - `review_user_profile` - Template for user profile review
+     - `daily_briefing` - Template for daily summary combining weather and user info
 
 ---
 
@@ -112,6 +117,11 @@ To interact with the tools, use an MCP-compatible client or OpenWebUI's external
 │  Tools:         │
 │  • get_weather  │  Returns demo weather data
 │  • get_user_info│  Returns demo user data
+│                 │
+│  Prompts:       │
+│  • analyze_weather    │  Weather analysis template
+│  • review_user_profile│ User review template
+│  • daily_briefing     │ Daily summary template
 └─────────────────┘
 ```
 
@@ -146,6 +156,42 @@ Returns information about a demo user.
 - Skills and preferences
 
 **Note:** These tools are accessible through MCP-compatible clients like OpenWebUI. The server uses the official MCP Python library (v1.7.1) with SSE transport.
+
+---
+
+## MCP Prompts
+
+The server also provides reusable prompt templates via the Model Context Protocol. These prompts help guide interactions with the tools:
+
+### analyze_weather
+Generates a prompt for analyzing the demo weather data and making recommendations.
+
+**Prompt Name:** `analyze_weather`
+
+**Parameters:** None
+
+**Description:** Provides a structured template for analyzing the demo weather data (San Francisco) using the `get_weather` tool and making activity recommendations based on conditions.
+
+### review_user_profile
+Generates a prompt for reviewing and analyzing user profile information.
+
+**Prompt Name:** `review_user_profile`
+
+**Parameters:**
+- `focus_area` (optional): What aspect to focus on - 'general', 'projects', 'skills', or 'preferences' (default: "general")
+
+**Description:** Provides a template for reviewing user data using the `get_user_info` tool with different analysis focuses.
+
+### daily_briefing
+Generates a prompt for creating a comprehensive daily briefing.
+
+**Prompt Name:** `daily_briefing`
+
+**Parameters:** None
+
+**Description:** Creates a daily briefing template that combines weather information and user context from both tools to provide a complete start-of-day summary.
+
+**Note:** Prompts are accessible through MCP-compatible clients that support the prompts feature. They provide pre-structured guidance for using the server's tools effectively.
 
 ---
 
@@ -197,6 +243,30 @@ To add more tools to the MCP server:
 4. Rebuild and restart: `docker compose up --build`
 
 The tool will automatically be available to MCP clients like OpenWebUI.
+
+### Adding More Prompts
+
+To add more prompts to the MCP server:
+
+1. Edit `mcp_server.py`
+2. Add a new function decorated with `@mcp.prompt()`:
+   ```python
+   @mcp.prompt()
+   def your_prompt_name(param1: str = "default"):
+       """Description of what your prompt does"""
+       return [
+           {
+               "role": "user",
+               "content": {
+                   "type": "text",
+                   "text": f"Your prompt text using {param1}"
+               }
+           }
+       ]
+   ```
+3. Rebuild and restart: `docker compose up --build`
+
+The prompt will automatically be available to MCP clients that support prompts.
 
 ### Customizing Data
 
