@@ -58,9 +58,7 @@ def get_weather(location: str = "San Francisco, CA") -> dict:
     wind information, and a 3-day forecast.
     """
     # Return weather data with the requested location
-    weather_data = WEATHER_DATA.copy()
-    weather_data["location"] = location
-    return weather_data
+    return {**WEATHER_DATA, "location": location}
 
 
 @mcp.tool()
@@ -74,9 +72,7 @@ def get_user_info(user_id: str = "user-12345") -> dict:
     and preferences.
     """
     # Return user info data with the requested user_id
-    user_info_data = USER_INFO_DATA.copy()
-    user_info_data["id"] = user_id
-    return user_info_data
+    return {**USER_INFO_DATA, "id": user_id}
 
 
 @mcp.prompt()
