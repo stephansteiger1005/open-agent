@@ -101,7 +101,8 @@ def review_user_profile(focus_area: str = "general"):
     different focus areas.
     
     Args:
-        focus_area: What aspect to focus on - 'general', 'projects', 'skills', or 'preferences'
+        focus_area: What aspect to focus on - 'general', 'projects', 'skills', or 'preferences'.
+                   Defaults to 'general' for unsupported values.
     """
     focus_instructions = {
         "general": "Provide a comprehensive overview of the user's profile",
