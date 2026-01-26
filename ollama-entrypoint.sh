@@ -2,6 +2,7 @@
 
 # Start Ollama in the background
 /bin/ollama serve &
+OLLAMA_PID=$!
 
 # Wait for Ollama to be ready
 echo "Waiting for Ollama to start..."
@@ -30,5 +31,5 @@ else
     echo "Ollama will continue running, but the llama3 model may not be available."
 fi
 
-# Keep the container running
-wait
+# Keep the container running by waiting for the Ollama server process
+wait $OLLAMA_PID

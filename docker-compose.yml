@@ -9,6 +9,12 @@ services:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     restart: unless-stopped
 
   # MCP Server - Provides two demo tools with constant JSON data
@@ -60,9 +66,12 @@ services:
       - "host.docker.internal:host-gateway"
 
     depends_on:
-      - ollama
-      - mcp-server
-      - mcp-proxy
+      ollama:
+        condition: service_healthy
+      mcp-server:
+        condition: service_started
+      mcp-proxy:
+        condition: service_started
     restart: unless-stopped
 
 volumes:
