@@ -68,21 +68,18 @@ def get_user_info() -> str:
 
 
 @mcp.prompt()
-def analyze_weather(location: str = "San Francisco"):
-    """Analyze the weather for a given location.
+def analyze_weather():
+    """Analyze the demo weather data.
     
-    Provides a prompt template for analyzing weather data and making
-    recommendations based on the conditions.
-    
-    Args:
-        location: The location to analyze weather for (default: San Francisco)
+    Provides a prompt template for analyzing the demo weather data
+    (San Francisco) and making recommendations based on the conditions.
     """
     return [
         {
             "role": "user",
             "content": {
                 "type": "text",
-                "text": f"""Please analyze the current weather conditions for {location}.
+                "text": """Please analyze the demo weather conditions.
 
 Use the get_weather tool to retrieve the weather data, then provide:
 1. A summary of current conditions

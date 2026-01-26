@@ -164,14 +164,13 @@ Returns information about a demo user.
 The server also provides reusable prompt templates via the Model Context Protocol. These prompts help guide interactions with the tools:
 
 ### analyze_weather
-Generates a prompt for analyzing weather conditions and making recommendations.
+Generates a prompt for analyzing the demo weather data and making recommendations.
 
 **Prompt Name:** `analyze_weather`
 
-**Parameters:**
-- `location` (optional): The location to analyze weather for (default: "San Francisco")
+**Parameters:** None
 
-**Description:** Provides a structured template for analyzing weather data using the `get_weather` tool and making activity recommendations based on conditions.
+**Description:** Provides a structured template for analyzing the demo weather data (San Francisco) using the `get_weather` tool and making activity recommendations based on conditions.
 
 ### review_user_profile
 Generates a prompt for reviewing and analyzing user profile information.
