@@ -220,25 +220,27 @@ Integration Options:
 The server exposes two tools via the Model Context Protocol:
 
 ### get_weather
-Returns current weather information for San Francisco.
+Returns current weather information for a specified location.
 
 **Tool Name:** `get_weather`
 
-**Parameters:** None
+**Parameters:**
+- `location` (optional): The location to get weather for (default: "San Francisco, CA")
 
-**Returns:** JSON string with weather data including:
+**Returns:** JSON object with weather data including:
 - Current temperature and conditions
 - Humidity and wind information  
 - 3-day forecast
 
 ### get_user_info
-Returns information about a demo user.
+Returns information about a specific user.
 
 **Tool Name:** `get_user_info`
 
-**Parameters:** None
+**Parameters:**
+- `user_id` (optional): The user ID to get information for (default: "user-12345")
 
-**Returns:** JSON string with user data including:
+**Returns:** JSON object with user data including:
 - User profile information
 - Associated projects
 - Skills and preferences
