@@ -7,15 +7,16 @@ A simplified demo showing OpenWebUI integrated with MCP (Model Context Protocol)
 
 ## What's Included
 
-This demo consists of just 2 Docker services:
+This demo consists of 3 Docker services:
 
 1. **OpenWebUI** - A user-friendly chat interface
    - No external models required
    - Pre-configured for demo use
    - MCP tools integration enabled
+   - OpenAPI tools integration enabled
    - Accessible at http://localhost:3000
 
-2. **MCP Server** - Provides demo tools and prompts:
+2. **MCP Server** - Provides demo tools and prompts via MCP protocol:
    - **Tools:**
      - `get_weather` - Returns constant weather data for San Francisco
      - `get_user_info` - Returns constant user profile information
@@ -23,6 +24,13 @@ This demo consists of just 2 Docker services:
      - `analyze_weather` - Template for weather analysis
      - `review_user_profile` - Template for user profile review
      - `daily_briefing` - Template for daily summary combining weather and user info
+   - Accessible at http://localhost:8080
+
+3. **MCP to OpenAPI Proxy** - Exposes MCP tools as OpenAPI/REST endpoints:
+   - Connects to the MCP server and translates MCP protocol to OpenAPI
+   - Provides OpenAPI specification at `/openapi.json`
+   - Interactive API docs at `/docs`
+   - Accessible at http://localhost:8081
 
 ---
 
@@ -38,7 +46,8 @@ This demo consists of just 2 Docker services:
    - No authentication required (demo mode)
 
 3. **Access the MCP Tools API:**
-   - The tool server is available at http://localhost:8080
+   - The MCP server is available at http://localhost:8080 (MCP protocol over SSE)
+   - The OpenAPI proxy is available at http://localhost:8081 (REST API)
    - View the [OpenWebUI Configuration Guide](OPENWEBUI_CONFIGURATION.md) for detailed setup instructions
 
 ---
@@ -46,6 +55,10 @@ This demo consists of just 2 Docker services:
 ## Using the Tools
 
 ### Integration with OpenWebUI
+
+OpenWebUI supports two methods for connecting to the demo tools:
+
+#### Option 1: MCP Protocol (Direct Connection)
 
 The MCP server uses the official Model Context Protocol (MCP) Python library and provides tools via SSE (Server-Sent Events) transport, which is compatible with OpenWebUI's MCP integration.
 
@@ -72,13 +85,39 @@ The MCP server will automatically expose two tools:
 - `get_weather` - Returns weather data for San Francisco
 - `get_user_info` - Returns demo user profile information
 
-**Note:** The MCP server uses the official MCP protocol over SSE transport, making it compatible with OpenWebUI and other MCP-compliant clients. For detailed setup instructions, see [OPENWEBUI_CONFIGURATION.md](OPENWEBUI_CONFIGURATION.md).
+#### Option 2: OpenAPI/REST (Via Proxy)
+
+The MCP to OpenAPI proxy exposes the same tools as standard REST endpoints with OpenAPI specification.
+
+**OpenWebUI Configuration:**
+
+To connect OpenWebUI to the OpenAPI proxy:
+
+1. **Access OpenWebUI** at http://localhost:3000
+2. **Navigate to** "Externe Werkzeuge" (External Tools) in the settings
+3. **Click** "Verbindung hinzufügen" (Add Connection)
+4. **Configure the connection** with the following settings:
+   - **Type**: OpenAPI
+   - **URL**: `http://mcp-proxy:8081/openapi.json` (from within Docker network)
+     - Or `http://localhost:8081/openapi.json` (from host machine)
+   - **Authentication**: None (Keine)
+   - **ID**: `demo-openapi-proxy` (or any unique identifier)
+   - **Name**: `Demo OpenAPI Proxy`
+   - **Description**: `OpenAPI proxy for MCP server tools`
+   - **Visibility**: Public (Öffentlich)
+5. **Save** the configuration
+
+The proxy will automatically expose the same two tools via REST API.
+
+**Note:** Both methods provide access to the same tools. Use MCP protocol for direct integration with MCP-compliant clients, or use the OpenAPI proxy for standard REST API access. For detailed setup instructions, see [OPENWEBUI_CONFIGURATION.md](OPENWEBUI_CONFIGURATION.md).
 
 ### Direct API Access
 
+#### MCP Protocol
+
 The MCP server uses the official Model Context Protocol over SSE (Server-Sent Events) transport. While primarily designed for MCP clients like OpenWebUI, you can also interact with it using standard MCP client libraries.
 
-**Testing the Server:**
+**Testing the MCP Server:**
 
 You can verify the server is running by checking the SSE endpoint:
 
@@ -87,42 +126,72 @@ You can verify the server is running by checking the SSE endpoint:
 curl http://localhost:8080/sse -H "Accept: text/event-stream"
 ```
 
+#### OpenAPI/REST
+
+The OpenAPI proxy provides standard REST endpoints for the same tools.
+
+**Testing the OpenAPI Proxy:**
+
+```bash
+# Get list of available tools
+curl http://localhost:8081/tools
+
+# Get OpenAPI specification
+curl http://localhost:8081/openapi.json
+
+# Call a tool
+curl -X POST http://localhost:8081/tools/get_weather \
+  -H "Content-Type: application/json" \
+  -d '{"arguments": {}}'
+
+# Access interactive API documentation
+# Open in browser: http://localhost:8081/docs
+```
+
 **Available Tools:**
 - `get_weather` - Returns current weather information for San Francisco
 - `get_user_info` - Returns demo user profile information
 
-To interact with the tools, use an MCP-compatible client or OpenWebUI's external tools feature.
+To interact with the tools, use an MCP-compatible client, OpenWebUI's external tools feature, or make direct REST API calls to the proxy.
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────┐
-│   OpenWebUI     │  http://localhost:3000
-│  (Chat UI)      │  
-└────────┬────────┘
-         │
-         │ MCP over SSE (http://mcp-server:8080)
-         │ Auto-appends: /sse (GET), /messages (POST)
-         │
-┌────────▼────────┐
-│   MCP Server    │  http://localhost:8080
-│  (FastMCP/SSE)  │
-│                 │
-│  Endpoints:     │
-│  • GET /sse     │  SSE stream for server→client
-│  • POST /messages│ Client messages
-│                 │
-│  Tools:         │
-│  • get_weather  │  Returns demo weather data
-│  • get_user_info│  Returns demo user data
-│                 │
-│  Prompts:       │
+                   ┌─────────────────┐
+                   │   OpenWebUI     │  http://localhost:3000
+                   │  (Chat UI)      │  
+                   └────────┬────────┘
+                            │
+          ┌─────────────────┼─────────────────┐
+          │                 │                 │
+          │ MCP over SSE    │                 │ OpenAPI/REST
+          │                 │                 │
+┌─────────▼─────────┐       │       ┌─────────▼─────────┐
+│   MCP Server      │       │       │ MCP→OpenAPI Proxy │  http://localhost:8081
+│  (FastMCP/SSE)    │◄──────┘       │  (FastAPI)        │
+│                   │ MCP Protocol  │                   │
+│ http://localhost: │               │  Endpoints:       │
+│           8080    │               │  • GET  /tools    │  List tools
+│                   │               │  • POST /tools/{} │  Call tool
+│  Endpoints:       │               │  • GET  /openapi  │  OpenAPI spec
+│  • GET /sse       │               │  • GET  /docs     │  API docs
+│  • POST /messages │               │                   │
+│                   │               └───────────────────┘
+│  Tools:           │
+│  • get_weather    │  Returns demo weather data
+│  • get_user_info  │  Returns demo user data
+│                   │
+│  Prompts:         │
 │  • analyze_weather    │  Weather analysis template
 │  • review_user_profile│ User review template
 │  • daily_briefing     │ Daily summary template
-└─────────────────┘
+└───────────────────┘
+
+Integration Options:
+1. Direct MCP: OpenWebUI → MCP Server (MCP protocol over SSE)
+2. Via Proxy: OpenWebUI → OpenAPI Proxy → MCP Server (REST → MCP)
 ```
 
 ---
@@ -199,10 +268,13 @@ Generates a prompt for creating a comprehensive daily briefing.
 
 ```
 .
-├── docker-compose.yml          # Defines the 2 services
+├── docker-compose.yml          # Defines the 3 services
 ├── Dockerfile.mcp              # Dockerfile for MCP server
+├── Dockerfile.proxy            # Dockerfile for OpenAPI proxy
 ├── mcp_server.py               # MCP server using official mcp library v1.7.1
-├── requirements.txt            # Python dependencies (mcp==1.7.1)
+├── mcp_openapi_proxy.py        # MCP to OpenAPI proxy server
+├── requirements.txt            # Python dependencies for MCP server
+├── requirements-proxy.txt      # Python dependencies for proxy
 ├── README.md                   # This file
 ├── QUICKSTART.md               # Quick start guide
 ├── OPENWEBUI_CONFIGURATION.md  # Detailed OpenWebUI setup guide

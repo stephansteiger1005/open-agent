@@ -9,10 +9,24 @@ services:
       - "8080:8080"
     restart: unless-stopped
 
+  # MCP to OpenAPI Proxy - Exposes MCP tools as OpenAPI/REST endpoints
+  mcp-proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile.proxy
+    container_name: demo-mcp-proxy
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mcp-server
+    restart: unless-stopped
+
   # OpenWebUI - Chat interface
   # Note: Tool integration depends on OpenWebUI version and configuration.
   # The MCP server is accessible at http://mcp-server:8080 from within the Docker network
   # and at http://localhost:8080 from the host machine.
+  # The MCP OpenAPI proxy is accessible at http://mcp-proxy:8081 from within the Docker network
+  # and at http://localhost:8081 from the host machine.
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
     container_name: demo-openwebui
@@ -29,6 +43,7 @@ services:
       - openwebui_data:/app/backend/data
     depends_on:
       - mcp-server
+      - mcp-proxy
     restart: unless-stopped
 
 volumes:
