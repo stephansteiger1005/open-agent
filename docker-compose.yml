@@ -1,4 +1,16 @@
 services:
+  # Ollama - LLM backend with llama3 model
+  ollama:
+    build:
+      context: .
+      dockerfile: Dockerfile.ollama
+    container_name: demo-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
   # MCP Server - Provides two demo tools with constant JSON data
   mcp-server:
     build:
@@ -39,15 +51,20 @@ services:
       # User preconfiguration
       - DEFAULT_USER_ROLE=admin
       - ENABLE_SIGNUP=false
+      
+      # Ollama API configuration
+      - OLLAMA_BASE_URL=http://ollama:11434
     volumes:
       - openwebui_data:/app/backend/data
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
     depends_on:
+      - ollama
       - mcp-server
       - mcp-proxy
     restart: unless-stopped
 
 volumes:
+  ollama_data:
   openwebui_data:
