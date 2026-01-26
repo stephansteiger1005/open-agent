@@ -47,10 +47,7 @@ class ProductionMCPClient:
         self.tools = {}
         self._initialized = False
         self._session: Optional[ClientSession] = None
-        self._read_stream = None
-        self._write_stream = None
-        self._sse_context = None
-        self._session_context = None
+        self._connection_task = None
     
     async def initialize(self):
         """Initialize connection to MCP server and fetch available tools"""
@@ -63,37 +60,65 @@ class ProductionMCPClient:
             # Construct SSE endpoint URL
             sse_url = f"{self.mcp_server_url}/sse"
             
-            # Create SSE client connection
-            self._sse_context = sse.sse_client(sse_url)
-            self._read_stream, self._write_stream = await self._sse_context.__aenter__()
+            # Start the connection in a background task
+            self._connection_task = asyncio.create_task(self._maintain_connection(sse_url))
             
-            # Create MCP client session
-            self._session_context = ClientSession(self._read_stream, self._write_stream)
-            self._session = await self._session_context.__aenter__()
+            # Wait for initialization to complete with a timeout
+            max_wait = 30  # seconds
+            for _ in range(max_wait * 10):
+                if self._initialized:
+                    break
+                await asyncio.sleep(0.1)
+            else:
+                raise TimeoutError("Failed to initialize MCP connection within 30 seconds")
             
-            # Initialize the MCP session
-            init_result = await self._session.initialize()
-            logger.info(f"Connected to MCP server: {init_result.serverInfo.name}")
-            logger.info(f"Protocol version: {init_result.protocolVersion}")
-            
-            # Fetch available tools from the server
-            tools_result = await self._session.list_tools()
-            
-            # Store tools in a dictionary for easy lookup
-            for tool in tools_result.tools:
-                self.tools[tool.name] = {
-                    "name": tool.name,
-                    "description": tool.description or "",
-                    "inputSchema": tool.inputSchema or {"type": "object", "properties": {}}
-                }
-            
-            self._initialized = True
             logger.info(f"MCP client initialized with {len(self.tools)} tools: {list(self.tools.keys())}")
             
         except Exception as e:
             logger.error(f"Failed to initialize MCP client: {e}", exc_info=True)
             await self.cleanup()
             raise
+    
+    async def _maintain_connection(self, sse_url: str):
+        """Maintain persistent connection to MCP server"""
+        try:
+            # Create SSE client connection using proper async context manager
+            async with sse.sse_client(sse_url) as (read_stream, write_stream):
+                # Create MCP client session using proper async context manager
+                async with ClientSession(read_stream, write_stream) as session:
+                    self._session = session
+                    
+                    # Initialize the MCP session
+                    init_result = await session.initialize()
+                    logger.info(f"Connected to MCP server: {init_result.serverInfo.name}")
+                    logger.info(f"Protocol version: {init_result.protocolVersion}")
+                    
+                    # Fetch available tools from the server
+                    tools_result = await session.list_tools()
+                    
+                    # Store tools in a dictionary for easy lookup
+                    for tool in tools_result.tools:
+                        self.tools[tool.name] = {
+                            "name": tool.name,
+                            "description": tool.description or "",
+                            "inputSchema": tool.inputSchema or {"type": "object", "properties": {}}
+                        }
+                    
+                    self._initialized = True
+                    
+                    # Keep the connection alive - this will block until cleanup is called
+                    # The session stays open as long as we're in this async with block
+                    await asyncio.Event().wait()  # Wait indefinitely
+                    
+        except asyncio.CancelledError:
+            logger.info("MCP connection task cancelled")
+            raise
+        except Exception as e:
+            logger.error(f"Error in MCP connection: {e}", exc_info=True)
+            raise
+        finally:
+            self._session = None
+            self._initialized = False
     
     async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -111,6 +136,9 @@ class ProductionMCPClient:
         
         if tool_name not in self.tools:
             raise ValueError(f"Tool '{tool_name}' not found")
+        
+        if not self._session:
+            raise RuntimeError("MCP session is not connected")
         
         try:
             logger.info(f"Calling tool '{tool_name}' with arguments: {arguments}")
@@ -150,16 +178,13 @@ class ProductionMCPClient:
     async def cleanup(self):
         """Clean up MCP client resources"""
         try:
-            if self._session_context:
-                await self._session_context.__aexit__(None, None, None)
-                self._session_context = None
-                self._session = None
-            
-            if self._sse_context:
-                await self._sse_context.__aexit__(None, None, None)
-                self._sse_context = None
-                self._read_stream = None
-                self._write_stream = None
+            if self._connection_task:
+                self._connection_task.cancel()
+                try:
+                    await self._connection_task
+                except asyncio.CancelledError:
+                    pass
+                self._connection_task = None
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
         
