@@ -1,0 +1,18 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY requirements-proxy.txt .
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements-proxy.txt
+
+# Copy the proxy server code
+COPY mcp_openapi_proxy.py .
+
+# Expose port
+EXPOSE 8081
+
+# Run the proxy server
+CMD ["python", "mcp_openapi_proxy.py"]
