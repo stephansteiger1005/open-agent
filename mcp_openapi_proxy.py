@@ -68,8 +68,12 @@ class ProductionMCPClient:
             # Wait for initialization to complete with a timeout
             try:
                 await asyncio.wait_for(self._init_event.wait(), timeout=30.0)
-            except asyncio.TimeoutError:
-                raise TimeoutError("Failed to initialize MCP connection within 30 seconds")
+            except asyncio.TimeoutError as e:
+                raise asyncio.TimeoutError("Failed to initialize MCP connection within 30 seconds") from e
+            
+            # Check if initialization actually succeeded
+            if not self._initialized:
+                raise RuntimeError("MCP connection initialization failed")
             
             logger.info(f"MCP client initialized with {len(self.tools)} tools: {list(self.tools.keys())}")
             
@@ -103,6 +107,7 @@ class ProductionMCPClient:
                             "inputSchema": tool.inputSchema or {"type": "object", "properties": {}}
                         }
                     
+                    # Mark as initialized and signal waiting tasks
                     self._initialized = True
                     self._init_event.set()
                     
@@ -114,7 +119,8 @@ class ProductionMCPClient:
             raise
         except Exception as e:
             logger.error(f"Error in MCP connection: {e}", exc_info=True)
-            self._init_event.set()  # Unblock waiting tasks even on error
+            # Signal init event so waiting tasks don't hang, but don't mark as initialized
+            self._init_event.set()
             raise
         finally:
             self._session = None
@@ -134,11 +140,12 @@ class ProductionMCPClient:
         if not self._initialized:
             await self.initialize()
         
+        # Check both initialized and session to avoid race condition
+        if not self._initialized or not self._session:
+            raise RuntimeError("MCP session is not connected")
+        
         if tool_name not in self.tools:
             raise ValueError(f"Tool '{tool_name}' not found")
-        
-        if not self._session:
-            raise RuntimeError("MCP session is not connected")
         
         try:
             logger.info(f"Calling tool '{tool_name}' with arguments: {arguments}")
