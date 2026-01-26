@@ -15,10 +15,9 @@ import logging
 from typing import Any, Dict, List, Optional
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
-import httpx
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -86,26 +85,23 @@ class SimpleMCPClient:
             raise
     
     async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Call a tool on the MCP server via HTTP request"""
+        """
+        Call a tool and return its result.
+        
+        Note: This is a simplified implementation that returns the same demo data
+        as the MCP server. For production use, implement proper MCP protocol communication
+        using the official MCP client library to dynamically call the actual MCP server.
+        """
         if not self._initialized:
             await self.initialize()
         
         if tool_name not in self.tools:
             raise ValueError(f"Tool '{tool_name}' not found")
         
-        # Make direct HTTP request to MCP server's internal implementation
-        # For this demo, we'll call the tools via HTTP using the /tools endpoint
-        # In production, use the official MCP client library
-        mcp_server_url = "http://mcp-server:8080"
-        
+        # Return demo data that matches the MCP server's responses
+        # In production, use the MCP client library to communicate with the server
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                # Construct JSON-RPC request for MCP
-                # Note: Since SSE requires session management, we'll simulate the result
-                # In production, implement proper MCP client using the mcp library
-                
-                # For this demo, return mock data based on tool name
-                if tool_name == "get_weather":
+            if tool_name == "get_weather":
                     return {
                         "content": [
                             {
@@ -158,6 +154,8 @@ class SimpleMCPClient:
                 else:
                     raise ValueError(f"Unknown tool: {tool_name}")
         
+        except ValueError:
+            raise
         except Exception as e:
             logger.error(f"Error calling tool {tool_name}: {e}")
             raise HTTPException(status_code=500, detail=str(e))
