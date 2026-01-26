@@ -5,19 +5,21 @@ MCP to OpenAPI Proxy Server
 This proxy server connects to an MCP server and exposes its tools as OpenAPI/REST endpoints.
 This allows OpenWebUI and other clients to use MCP tools via standard REST API calls.
 
-Note: This is a simplified implementation that directly calls the MCP server's tools
-rather than using the full MCP protocol. For production use, consider using the official
-MCP client library.
+This is a production-ready implementation using the official MCP Python SDK.
 """
 import asyncio
 import json
 import logging
+import os
 from typing import Any, Dict, List, Optional
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+
+from mcp import ClientSession
+from mcp.client import sse
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -34,130 +36,145 @@ class ToolCallResponse(BaseModel):
     content: List[Dict[str, Any]]
 
 
-class SimpleMCPClient:
+class ProductionMCPClient:
     """
-    Simplified client for MCP server that directly imports and calls the MCP tools.
-    This works for local/containerized setups where we can import the MCP server module.
+    Production-ready MCP client that connects to an MCP server via SSE transport.
+    Uses the official MCP Python SDK for full protocol support.
     """
     
-    def __init__(self):
+    def __init__(self, mcp_server_url: str):
+        self.mcp_server_url = mcp_server_url
         self.tools = {}
         self._initialized = False
-        self.mcp_module = None
+        self._session: Optional[ClientSession] = None
+        self._connection_task = None
+        self._shutdown_event = asyncio.Event()
+        self._init_event = asyncio.Event()
     
     async def initialize(self):
-        """Initialize connection and fetch available tools"""
+        """Initialize connection to MCP server and fetch available tools"""
         if self._initialized:
             return
         
         try:
-            logger.info("Initializing simple MCP client")
+            logger.info(f"Connecting to MCP server at {self.mcp_server_url}")
             
-            # For this demo, we'll define the tools statically based on what we know
-            # the MCP server provides. In a production setup, you would use the MCP client
-            # library to discover tools dynamically.
-            self.tools = {
-                "get_weather": {
-                    "name": "get_weather",
-                    "description": "Get current weather information for San Francisco",
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {},
-                        "required": []
-                    }
-                },
-                "get_user_info": {
-                    "name": "get_user_info",
-                    "description": "Get information about the current user",
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {},
-                        "required": []
-                    }
-                }
-            }
+            # Construct SSE endpoint URL
+            sse_url = f"{self.mcp_server_url}/sse"
             
-            self._initialized = True
-            logger.info(f"MCP client initialized with {len(self.tools)} tools")
+            # Start the connection in a background task
+            self._connection_task = asyncio.create_task(self._maintain_connection(sse_url))
+            
+            # Wait for initialization to complete with a timeout
+            try:
+                await asyncio.wait_for(self._init_event.wait(), timeout=30.0)
+            except asyncio.TimeoutError as e:
+                raise asyncio.TimeoutError("Failed to initialize MCP connection within 30 seconds") from e
+            
+            # Check if initialization actually succeeded
+            if not self._initialized:
+                raise RuntimeError("MCP connection initialization failed")
+            
+            logger.info(f"MCP client initialized with {len(self.tools)} tools: {list(self.tools.keys())}")
             
         except Exception as e:
-            logger.error(f"Failed to initialize MCP client: {e}")
+            logger.error(f"Failed to initialize MCP client: {e}", exc_info=True)
+            await self.cleanup()
             raise
+    
+    async def _maintain_connection(self, sse_url: str):
+        """Maintain persistent connection to MCP server"""
+        try:
+            # Create SSE client connection using proper async context manager
+            async with sse.sse_client(sse_url) as (read_stream, write_stream):
+                # Create MCP client session using proper async context manager
+                async with ClientSession(read_stream, write_stream) as session:
+                    self._session = session
+                    
+                    # Initialize the MCP session
+                    init_result = await session.initialize()
+                    logger.info(f"Connected to MCP server: {init_result.serverInfo.name}")
+                    logger.info(f"Protocol version: {init_result.protocolVersion}")
+                    
+                    # Fetch available tools from the server
+                    tools_result = await session.list_tools()
+                    
+                    # Store tools in a dictionary for easy lookup
+                    for tool in tools_result.tools:
+                        self.tools[tool.name] = {
+                            "name": tool.name,
+                            "description": tool.description or "",
+                            "inputSchema": tool.inputSchema or {"type": "object", "properties": {}}
+                        }
+                    
+                    # Mark as initialized and signal waiting tasks
+                    self._initialized = True
+                    self._init_event.set()
+                    
+                    # Keep the connection alive - wait for shutdown signal
+                    await self._shutdown_event.wait()
+                    
+        except asyncio.CancelledError:
+            logger.info("MCP connection task cancelled")
+            raise
+        except Exception as e:
+            logger.error(f"Error in MCP connection: {e}", exc_info=True)
+            # Signal init event so waiting tasks don't hang, but don't mark as initialized
+            self._init_event.set()
+            raise
+        finally:
+            self._session = None
+            self._initialized = False
     
     async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Call a tool and return its result.
+        Call a tool on the MCP server and return its result.
         
-        Note: This is a simplified implementation that returns the same demo data
-        as the MCP server. For production use, implement proper MCP protocol communication
-        using the official MCP client library to dynamically call the actual MCP server.
+        Args:
+            tool_name: Name of the tool to call
+            arguments: Arguments to pass to the tool
+            
+        Returns:
+            Dict with 'content' key containing list of content items
         """
+        # Ensure client is initialized
         if not self._initialized:
             await self.initialize()
+        
+        # Validate we have a valid session after initialization
+        if not self._session:
+            raise RuntimeError("MCP session is not connected")
         
         if tool_name not in self.tools:
             raise ValueError(f"Tool '{tool_name}' not found")
         
-        # Return demo data that matches the MCP server's responses
-        # In production, use the MCP client library to communicate with the server
         try:
-            if tool_name == "get_weather":
-                return {
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": json.dumps({
-                                "location": "San Francisco, CA",
-                                "temperature": 72,
-                                "unit": "fahrenheit",
-                                "conditions": "Sunny",
-                                "humidity": 65,
-                                "wind_speed": 8,
-                                "wind_direction": "NW",
-                                "forecast": [
-                                    {"day": "Today", "high": 75, "low": 58, "conditions": "Sunny"},
-                                    {"day": "Tomorrow", "high": 73, "low": 56, "conditions": "Partly Cloudy"},
-                                    {"day": "Friday", "high": 70, "low": 54, "conditions": "Cloudy"}
-                                ]
-                            }, indent=2)
-                        }
-                    ]
+            logger.info(f"Calling tool '{tool_name}' with arguments: {arguments}")
+            
+            # Call the tool via MCP protocol
+            result = await self._session.call_tool(tool_name, arguments)
+            
+            # Convert MCP result to our response format
+            content = []
+            for item in result.content:
+                content_item = {
+                    "type": item.type
                 }
-            elif tool_name == "get_user_info":
-                return {
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": json.dumps({
-                                "id": "user-12345",
-                                "name": "John Doe",
-                                "email": "john.doe@example.com",
-                                "role": "Developer",
-                                "department": "Engineering",
-                                "location": "San Francisco",
-                                "joined_date": "2020-01-15",
-                                "status": "active",
-                                "projects": [
-                                    {"id": "proj-1", "name": "MCP Demo", "role": "Lead Developer"},
-                                    {"id": "proj-2", "name": "OpenWebUI Integration", "role": "Contributor"}
-                                ],
-                                "skills": ["Python", "JavaScript", "Docker", "FastAPI"],
-                                "preferences": {
-                                    "theme": "dark",
-                                    "notifications": True,
-                                    "language": "en-US"
-                                }
-                            }, indent=2)
-                        }
-                    ]
-                }
-            else:
-                raise ValueError(f"Unknown tool: {tool_name}")
-        
+                # Add text if it's a text content
+                if hasattr(item, 'text'):
+                    content_item["text"] = item.text
+                # Add other attributes as needed
+                if hasattr(item, 'annotations') and item.annotations:
+                    content_item["annotations"] = item.annotations
+                    
+                content.append(content_item)
+            
+            return {"content": content}
+            
         except ValueError:
             raise
         except Exception as e:
-            logger.error(f"Error calling tool {tool_name}: {e}")
+            logger.error(f"Error calling tool {tool_name}: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=str(e))
     
     async def get_tools(self) -> Dict[str, Any]:
@@ -165,10 +182,28 @@ class SimpleMCPClient:
         if not self._initialized:
             await self.initialize()
         return self.tools
+    
+    async def cleanup(self):
+        """Clean up MCP client resources"""
+        try:
+            # Signal shutdown to the connection task
+            self._shutdown_event.set()
+            
+            if self._connection_task:
+                self._connection_task.cancel()
+                try:
+                    await self._connection_task
+                except asyncio.CancelledError:
+                    pass
+                self._connection_task = None
+        except Exception as e:
+            logger.error(f"Error during cleanup: {e}")
+        
+        self._initialized = False
 
 
 # Global MCP client instance
-mcp_client: Optional[SimpleMCPClient] = None
+mcp_client: Optional[ProductionMCPClient] = None
 
 
 @asynccontextmanager
@@ -178,7 +213,12 @@ async def lifespan(app: FastAPI):
     
     # Startup
     logger.info("Starting MCP OpenAPI proxy")
-    mcp_client = SimpleMCPClient()
+    
+    # Get MCP server URL from environment or use default
+    mcp_server_url = os.getenv("MCP_SERVER_URL", "http://mcp-server:8080")
+    logger.info(f"MCP server URL: {mcp_server_url}")
+    
+    mcp_client = ProductionMCPClient(mcp_server_url)
     
     try:
         await mcp_client.initialize()
@@ -191,6 +231,8 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     logger.info("Shutting down MCP OpenAPI proxy")
+    if mcp_client:
+        await mcp_client.cleanup()
 
 
 # Create FastAPI app
@@ -220,6 +262,9 @@ async def root():
 @app.get("/tools")
 async def list_tools():
     """List all available tools from the MCP server"""
+    if not mcp_client:
+        raise HTTPException(status_code=503, detail="MCP client not initialized")
+    
     try:
         tools = await mcp_client.get_tools()
         return {
@@ -241,6 +286,9 @@ async def list_tools():
 @app.post("/tools/{tool_name}")
 async def call_tool(tool_name: str, request: ToolCallRequest):
     """Call a specific tool"""
+    if not mcp_client:
+        raise HTTPException(status_code=503, detail="MCP client not initialized")
+    
     try:
         result = await mcp_client.call_tool(tool_name, request.arguments)
         return result
@@ -254,6 +302,13 @@ async def call_tool(tool_name: str, request: ToolCallRequest):
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
+    if not mcp_client:
+        return {
+            "status": "unhealthy",
+            "mcp_connected": False,
+            "error": "MCP client not initialized"
+        }
+    
     try:
         tools = await mcp_client.get_tools()
         return {
@@ -276,6 +331,9 @@ async def get_openapi_schema():
     Generate OpenAPI schema dynamically based on available MCP tools.
     This endpoint can be used by OpenWebUI to discover available tools.
     """
+    if not mcp_client:
+        raise HTTPException(status_code=503, detail="MCP client not initialized")
+    
     try:
         tools = await mcp_client.get_tools()
         
