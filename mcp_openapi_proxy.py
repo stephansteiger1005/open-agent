@@ -102,57 +102,57 @@ class SimpleMCPClient:
         # In production, use the MCP client library to communicate with the server
         try:
             if tool_name == "get_weather":
-                    return {
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": json.dumps({
-                                    "location": "San Francisco, CA",
-                                    "temperature": 72,
-                                    "unit": "fahrenheit",
-                                    "conditions": "Sunny",
-                                    "humidity": 65,
-                                    "wind_speed": 8,
-                                    "wind_direction": "NW",
-                                    "forecast": [
-                                        {"day": "Today", "high": 75, "low": 58, "conditions": "Sunny"},
-                                        {"day": "Tomorrow", "high": 73, "low": 56, "conditions": "Partly Cloudy"},
-                                        {"day": "Friday", "high": 70, "low": 54, "conditions": "Cloudy"}
-                                    ]
-                                }, indent=2)
-                            }
-                        ]
-                    }
-                elif tool_name == "get_user_info":
-                    return {
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": json.dumps({
-                                    "id": "user-12345",
-                                    "name": "John Doe",
-                                    "email": "john.doe@example.com",
-                                    "role": "Developer",
-                                    "department": "Engineering",
-                                    "location": "San Francisco",
-                                    "joined_date": "2020-01-15",
-                                    "status": "active",
-                                    "projects": [
-                                        {"id": "proj-1", "name": "MCP Demo", "role": "Lead Developer"},
-                                        {"id": "proj-2", "name": "OpenWebUI Integration", "role": "Contributor"}
-                                    ],
-                                    "skills": ["Python", "JavaScript", "Docker", "FastAPI"],
-                                    "preferences": {
-                                        "theme": "dark",
-                                        "notifications": True,
-                                        "language": "en-US"
-                                    }
-                                }, indent=2)
-                            }
-                        ]
-                    }
-                else:
-                    raise ValueError(f"Unknown tool: {tool_name}")
+                return {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": json.dumps({
+                                "location": "San Francisco, CA",
+                                "temperature": 72,
+                                "unit": "fahrenheit",
+                                "conditions": "Sunny",
+                                "humidity": 65,
+                                "wind_speed": 8,
+                                "wind_direction": "NW",
+                                "forecast": [
+                                    {"day": "Today", "high": 75, "low": 58, "conditions": "Sunny"},
+                                    {"day": "Tomorrow", "high": 73, "low": 56, "conditions": "Partly Cloudy"},
+                                    {"day": "Friday", "high": 70, "low": 54, "conditions": "Cloudy"}
+                                ]
+                            }, indent=2)
+                        }
+                    ]
+                }
+            elif tool_name == "get_user_info":
+                return {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": json.dumps({
+                                "id": "user-12345",
+                                "name": "John Doe",
+                                "email": "john.doe@example.com",
+                                "role": "Developer",
+                                "department": "Engineering",
+                                "location": "San Francisco",
+                                "joined_date": "2020-01-15",
+                                "status": "active",
+                                "projects": [
+                                    {"id": "proj-1", "name": "MCP Demo", "role": "Lead Developer"},
+                                    {"id": "proj-2", "name": "OpenWebUI Integration", "role": "Contributor"}
+                                ],
+                                "skills": ["Python", "JavaScript", "Docker", "FastAPI"],
+                                "preferences": {
+                                    "theme": "dark",
+                                    "notifications": True,
+                                    "language": "en-US"
+                                }
+                            }, indent=2)
+                        }
+                    ]
+                }
+            else:
+                raise ValueError(f"Unknown tool: {tool_name}")
         
         except ValueError:
             raise

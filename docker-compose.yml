@@ -41,6 +41,9 @@ services:
       - ENABLE_SIGNUP=false
     volumes:
       - openwebui_data:/app/backend/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
     depends_on:
       - mcp-server
       - mcp-proxy
