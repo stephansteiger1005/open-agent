@@ -1,2 +1,2 @@
 # MCP Server
-mcp==1.7.1
+fastmcp

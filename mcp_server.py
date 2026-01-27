@@ -4,7 +4,8 @@ MCP Server using the official Model Context Protocol Python library.
 This server provides two demo tools that can be used by OpenWebUI and other MCP clients.
 """
 import json
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
+from datetime import datetime
 
 # Create MCP server with no authentication
 mcp = FastMCP("Demo MCP Server")
@@ -59,6 +60,21 @@ def get_weather(location: str = "San Francisco, CA") -> dict:
     """
     # Return weather data with the requested location
     return {**WEATHER_DATA, "location": location}
+
+@mcp.tool()
+def get_time() -> dict:
+    """Get current time information.
+    
+    Returns system time and timezone information.
+    """
+    # Return system time and timezone information
+    now = datetime.now().astimezone()
+    data = {
+        "time": now.isoformat(),
+        "timezone": str(now.tzinfo)
+    }
+    return data
+
 
 
 @mcp.tool()
@@ -171,11 +187,7 @@ Format the briefing in a friendly, professional manner suitable for starting the
 if __name__ == "__main__":
     # Run the MCP server with SSE transport
     # The server will be accessible at http://0.0.0.0:8080
-    import uvicorn
+    #import uvicorn
     
     # Get the ASGI app for SSE transport
-    # sse_app() returns a Starlette ASGI application configured for MCP over SSE
-    app = mcp.sse_app()
-    
-    # Run with uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    mcp.run(transport="http", host="0.0.0.0", port=8080)
