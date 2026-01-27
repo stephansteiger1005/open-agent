@@ -1,6 +1,6 @@
 # OpenWebUI Configuration Guide
 
-This guide explains how to configure OpenWebUI to connect to the tools using either the MCP protocol or the OpenAPI proxy.
+This guide explains how to configure OpenWebUI to connect to the MCP tools using the MCP protocol.
 
 ## Prerequisites
 
@@ -8,29 +8,22 @@ This guide explains how to configure OpenWebUI to connect to the tools using eit
 - OpenWebUI accessible at http://localhost:3000
 - Ollama with llama3 model running at http://localhost:11434 (automatically configured)
 - MCP Server running at http://localhost:8080
-- MCP to OpenAPI Proxy running at http://localhost:8081
 
 **Note:** Ollama with llama3 model is automatically configured in OpenWebUI through the `OLLAMA_BASE_URL` environment variable. You can start chatting immediately without additional configuration.
 
 ## Integration Options
 
-OpenWebUI supports two methods to connect to the demo tools:
-
 ### Built-in: Ollama with llama3 Model
 
 OpenWebUI is automatically configured to use Ollama with the llama3 model through the `OLLAMA_BASE_URL` environment variable. No additional configuration is needed - you can start chatting immediately!
 
-### Option 1: Direct MCP Connection (Recommended)
+### MCP Server Connection
 
-Connect directly to the MCP server using the MCP protocol over SSE.
-
-### Option 2: OpenAPI Proxy Connection
-
-Connect via the OpenAPI proxy which exposes the MCP tools as REST endpoints.
+Connect directly to the MCP server using the MCP protocol over HTTP.
 
 ---
 
-## Option 1: MCP Server Connection
+## MCP Server Connection
 
 ### Step-by-Step Configuration
 
@@ -72,48 +65,6 @@ Click **"Speichern"** (Save) to save the connection.
 After saving, you should see the MCP server connection listed in your external tools. The connection status should show as active/connected.
 
 ---
-
-## Option 2: OpenAPI Proxy Connection
-
-### Step-by-Step Configuration
-
-#### 1. Access OpenWebUI Settings
-
-1. Open your browser and navigate to http://localhost:3000
-2. Click on the user icon or settings icon in the interface
-3. Navigate to **"Externe Werkzeuge"** (External Tools) or **"External Tools"** section
-
-#### 2. Add OpenAPI Proxy Connection
-
-Click on **"Verbindung hinzufügen"** (Add Connection) or **"Add Connection"** button.
-
-#### 3. Configure Connection Settings
-
-Fill in the following fields:
-
-| Field | Value | Description |
-|-------|-------|-------------|
-| **Type** | OpenAPI | Select this from the dropdown |
-| **URL** | `http://mcp-proxy:8081/openapi.json` | OpenAPI spec URL (Docker network) |
-| **Authentication** | None (Keine) | No authentication required |
-| **ID** | `demo-openapi-proxy` | Unique identifier for this connection |
-| **Name** | `Demo OpenAPI Proxy` | Display name |
-| **Description** | `OpenAPI proxy for MCP server tools` | Brief description |
-| **Visibility** | Public (Öffentlich) | Make tools available to all users |
-
-**Important Notes:**
-- Use `http://mcp-proxy:8081/openapi.json` when connecting from within the Docker network
-- Use `http://localhost:8081/openapi.json` when connecting from your host machine
-- The URL should point to the OpenAPI specification JSON file
-- The proxy automatically translates REST calls to MCP protocol
-
-#### 4. Save Configuration
-
-Click **"Speichern"** (Save) to save the connection.
-
-#### 5. Verify Connection
-
-After saving, you should see the OpenAPI proxy connection listed in your external tools. The connection status should show as active/connected.
 
 ---
 
@@ -159,6 +110,22 @@ Once configured, the following tools will be available in your OpenWebUI chats:
 "Show me my user profile information"
 ```
 
+### 3. get_time
+
+**Description:** Get current system time and timezone information
+
+**Parameters:** None
+
+**Returns:** Current time including:
+- ISO 8601 formatted timestamp
+- Timezone information
+
+**Example Usage:**
+```
+"What time is it?"
+"Can you get the current time?"
+```
+
 ## Using Tools in Conversations
 
 Once the MCP server is configured:
@@ -185,28 +152,18 @@ If the connection fails:
    ```bash
    # Check MCP server
    docker ps --filter "name=demo-mcp-server"
-   
-   # Check OpenAPI proxy
-   docker ps --filter "name=demo-mcp-proxy"
    ```
 
 2. **View Logs:**
    ```bash
    # MCP server logs
    docker logs demo-mcp-server
-   
-   # OpenAPI proxy logs
-   docker logs demo-mcp-proxy
    ```
 
-3. **Test Endpoints:**
+3. **Test Endpoint:**
    ```bash
-   # Test MCP SSE endpoint (will keep connection open)
-   curl http://localhost:8080/sse -H "Accept: text/event-stream"
-   
-   # Test OpenAPI proxy
-   curl http://localhost:8081/tools
-   curl http://localhost:8081/openapi.json
+   # Test MCP server
+   curl http://localhost:8080/mcp
    ```
 
 ### Tools Not Appearing
@@ -216,55 +173,30 @@ If tools don't appear in OpenWebUI:
 1. Verify the connection is saved and active
 2. Refresh the OpenWebUI page
 3. Check that visibility is set to "Public"
-4. Verify the URLs are correct:
-   - MCP: `http://mcp-server:8080` (without `/sse`)
-   - OpenAPI: `http://mcp-proxy:8081/openapi.json`
+4. Verify the URL is correct: `http://mcp-server:8080` (without `/mcp`)
 
 ### Authentication Errors
 
-The demo servers have **no authentication**. Ensure:
+The demo server has **no authentication**. Ensure:
 - Authentication is set to "None" (Keine)
 - No headers or API keys are configured
-
-### OpenAPI Proxy Not Connecting to MCP Server
-
-If the proxy can't reach the MCP server:
-
-1. Check both containers are running
-2. Verify they're on the same Docker network
-3. Check MCP server logs for errors
-4. Restart services: `docker compose restart`
 
 ## Technical Details
 
 ### MCP Protocol
 
 The MCP server uses:
-- **Protocol:** Model Context Protocol (MCP) v1.7.1
-- **Transport:** SSE (Server-Sent Events)
-- **Endpoints:** `/sse` (GET - SSE stream), `/messages` (POST - client messages)
-- **Library:** Official Python MCP library (mcp==1.7.1)
+- **Protocol:** Model Context Protocol (MCP)
+- **Transport:** HTTP
+- **Endpoint:** `/mcp`
+- **Library:** FastMCP (Python library for MCP)
 - **Note:** Configure clients with base URL only; the client automatically appends the correct endpoint paths
-
-### OpenAPI Proxy
-
-The proxy server provides:
-- **Framework:** FastAPI
-- **Protocol Translation:** REST → MCP
-- **Endpoints:**
-  - `GET /tools` - List available tools
-  - `POST /tools/{tool_name}` - Call a tool
-  - `GET /openapi.json` - OpenAPI specification
-  - `GET /docs` - Interactive API documentation
-  - `GET /health` - Health check
-- **Communication:** Uses httpx to communicate with MCP server
 
 ### Network Configuration
 
 Within Docker Compose:
 - Ollama: `ollama:11434`
 - MCP Server: `mcp-server:8080`
-- MCP Proxy: `mcp-proxy:8081`
 - OpenWebUI: `openwebui:8080`
 - All services are on the same Docker network
 
