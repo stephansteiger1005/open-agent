@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 MCP Server using the official Model Context Protocol Python library.
-This server provides two demo tools that can be used by OpenWebUI and other MCP clients.
+This server provides three demo tools that can be used by OpenWebUI and other MCP clients.
 """
 import json
 from fastmcp import FastMCP
@@ -75,7 +75,6 @@ def get_time() -> str:
         "timezone": str(now.tzinfo)
     }
     return json.dumps(data, indent=2)
-
 
 
 @mcp.tool()
