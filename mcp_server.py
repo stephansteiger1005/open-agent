@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 MCP Server using the official Model Context Protocol Python library.
-This server provides two demo tools that can be used by OpenWebUI and other MCP clients.
+This server provides three demo tools that can be used by OpenWebUI and other MCP clients.
 """
 import json
 from fastmcp import FastMCP
@@ -49,7 +49,7 @@ USER_INFO_DATA = {
 
 
 @mcp.tool()
-def get_weather(location: str = "San Francisco, CA") -> dict:
+def get_weather(location: str = "San Francisco, CA") -> str:
     """Get current weather information for a location.
     
     Args:
@@ -58,27 +58,27 @@ def get_weather(location: str = "San Francisco, CA") -> dict:
     Returns constant demo data including temperature, conditions, humidity,
     wind information, and a 3-day forecast.
     """
-    # Return weather data with the requested location
-    return {**WEATHER_DATA, "location": location}
+    # Return weather data with the requested location as JSON string
+    result = {**WEATHER_DATA, "location": location}
+    return json.dumps(result, indent=2)
 
 @mcp.tool()
-def get_time() -> dict:
+def get_time() -> str:
     """Get current time information.
     
     Returns system time and timezone information.
     """
-    # Return system time and timezone information
+    # Return system time and timezone information as JSON string
     now = datetime.now().astimezone()
     data = {
         "time": now.isoformat(),
         "timezone": str(now.tzinfo)
     }
-    return data
-
+    return json.dumps(data, indent=2)
 
 
 @mcp.tool()
-def get_user_info(user_id: str = "user-12345") -> dict:
+def get_user_info(user_id: str = "user-12345") -> str:
     """Get information about a specific user.
     
     Args:
@@ -87,8 +87,9 @@ def get_user_info(user_id: str = "user-12345") -> dict:
     Returns constant demo data including user profile, projects, skills,
     and preferences.
     """
-    # Return user info data with the requested user_id
-    return {**USER_INFO_DATA, "id": user_id}
+    # Return user info data with the requested user_id as JSON string
+    result = {**USER_INFO_DATA, "id": user_id}
+    return json.dumps(result, indent=2)
 
 
 @mcp.prompt()
