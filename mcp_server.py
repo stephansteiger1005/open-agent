@@ -48,23 +48,31 @@ USER_INFO_DATA = {
 
 
 @mcp.tool()
-def get_weather() -> str:
-    """Get current weather information for San Francisco.
+def get_weather(location: str = "San Francisco, CA") -> dict:
+    """Get current weather information for a location.
+    
+    Args:
+        location: The location to get weather for (default: "San Francisco, CA")
     
     Returns constant demo data including temperature, conditions, humidity,
     wind information, and a 3-day forecast.
     """
-    return json.dumps(WEATHER_DATA, indent=2)
+    # Return weather data with the requested location
+    return {**WEATHER_DATA, "location": location}
 
 
 @mcp.tool()
-def get_user_info() -> str:
-    """Get information about the current user.
+def get_user_info(user_id: str = "user-12345") -> dict:
+    """Get information about a specific user.
+    
+    Args:
+        user_id: The user ID to get information for (default: "user-12345")
     
     Returns constant demo data including user profile, projects, skills,
     and preferences.
     """
-    return json.dumps(USER_INFO_DATA, indent=2)
+    # Return user info data with the requested user_id
+    return {**USER_INFO_DATA, "id": user_id}
 
 
 @mcp.prompt()

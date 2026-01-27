@@ -123,9 +123,10 @@ Once configured, the following tools will be available in your OpenWebUI chats:
 
 ### 1. get_weather
 
-**Description:** Get current weather information for San Francisco
+**Description:** Get current weather information for a specified location
 
-**Parameters:** None
+**Parameters:**
+- `location` (optional): The location to get weather for (default: "San Francisco, CA")
 
 **Returns:** Weather data including:
 - Current temperature and conditions
@@ -136,13 +137,16 @@ Once configured, the following tools will be available in your OpenWebUI chats:
 **Example Usage:**
 ```
 "Can you get the current weather for me?"
+"What's the weather like in New York?"
+"Get weather for Paris, France"
 ```
 
 ### 2. get_user_info
 
-**Description:** Get information about the current user
+**Description:** Get information about a specific user
 
-**Parameters:** None
+**Parameters:**
+- `user_id` (optional): The user ID to get information for (default: "user-12345")
 
 **Returns:** User profile data including:
 - User ID, name, and email

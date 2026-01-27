@@ -107,8 +107,10 @@ You have two options for connecting OpenWebUI to the tools:
 ### Available Tools
 
 Once configured, OpenWebUI will have access to two tools:
-- **get_weather** - Returns weather data for San Francisco
-- **get_user_info** - Returns demo user profile information
+- **get_weather** - Returns weather data for a specified location (default: San Francisco)
+  - Parameters: `location` (optional)
+- **get_user_info** - Returns user profile information for a specified user ID (default: user-12345)
+  - Parameters: `user_id` (optional)
 
 You can now use these tools in your chats by asking the AI to use them!
 
