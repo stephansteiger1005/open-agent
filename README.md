@@ -7,7 +7,21 @@ Get up and running with the OpenWebUI MCP demo in 3 simple steps!
 - Docker installed
 - Docker Compose installed
 
-## Step 1: Start the Services
+## Step 1: Prepare submodule(s)
+
+MCP_Viewing is needed under ./MCP_Viewing
+
+Use this if you have access to the  https://github.com/iau4u/MCP_Viewing directly
+```bash
+git submodule add https://github.com/iau4u/MCP_Viewing ./MCP_Viewing
+```
+
+Use this if you can only access it with an api-key
+```bash
+git clone https://oauth2:<your-api-key>@github.com/iau4u/MCP_Viewing.git
+```
+
+## Step 2: Start the Services
 
 ```bash
 cp .env.example .env
@@ -25,7 +39,7 @@ This will:
 - Pull and start OpenAPI-proxy (preconfigured for MCP server and MCP_Viewing)
 - Pull and start OpenWebUI
 
-## Step 2: Access the Services
+## Step 3: Access the Services
 
 ### OpenWebUI (Chat Interface)
 Open your browser and navigate to:
