@@ -1,28 +1,10 @@
 services:
-  # Ollama - LLM backend with llama3 model
-  ollama:
-    build:
-      context: .
-      dockerfile: Dockerfile.ollama
-    container_name: demo-ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 60s
-    restart: unless-stopped
-
   # MCP Server - Provides demo tools with constant JSON data
   mcp-server:
     build:
       context: .
       dockerfile: Dockerfile.mcp
-    container_name: demo-mcp-server
+    container_name: mcp-server
     ports:
       - "8080:8080"
     restart: unless-stopped
@@ -32,7 +14,7 @@ services:
   # and at http://localhost:8080 from the host machine.
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
-    container_name: demo-openwebui
+    container_name: openwebui
     ports:
       - "3000:8080"
     environment:
@@ -42,19 +24,59 @@ services:
       # User preconfiguration
       - DEFAULT_USER_ROLE=admin
       - ENABLE_SIGNUP=false
-      
-      # Ollama API configuration
-      - OLLAMA_BASE_URL=http://ollama:11434
     volumes:
       - openwebui_data:/app/backend/data
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
     depends_on:
-      ollama:
-        condition: service_healthy
-      mcp-server:
-        condition: service_started
+      - mcp-openai-proxy
+    restart: unless-stopped
+
+  mcp-viewing:
+    build:
+      context: ./MCP_Viewing
+      dockerfile: ./Dockerfile
+    container_name: mcp-viewing
+    ports:
+      - "8081:8080"  # REST API
+      - "9000:9000"  # MCP Server
+    environment:
+      # Spring Boot Configuration
+      - SPRING_APPLICATION_NAME=mcp-viewing
+      - SERVER_PORT=8080
+      
+      # Database Configuration (in-memory for demo, use volume for persistence)
+      - SPRING_DATASOURCE_URL=jdbc:derby:memory:PARTINFODB;create=true
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.apache.derby.jdbc.EmbeddedDriver
+      
+      # MCP Server Configuration
+      - MCP_SERVER_ENABLED=true
+      - MCP_SERVER_PORT=9000
+      - MCP_SERVER_MODE=socket
+      
+      # JVM Options
+      - JAVA_OPTS=-Xms256m -Xmx512m
+      
+      # Logging
+      - LOGGING_LEVEL_COM_MCPVIEWING=DEBUG
+  
+  mcp-openai-proxy:
+    image: ghcr.io/open-webui/mcpo:main
+    container_name: mcp-openai-proxy
+    depends_on:
+      - mcp-viewing
+      - mcp-server
+    command:
+      [
+        "mcpo",
+        "--config", "/cfg/mcpo-config.json",
+        "--port", "8000"
+      ]
+    ports:
+      - "8000:8000"
+    volumes:
+    - ./cfg:/cfg/
     restart: unless-stopped
 
 volumes:
