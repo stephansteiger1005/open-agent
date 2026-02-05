@@ -2,7 +2,7 @@
     "mcpServers": {
       "mcp_viewing": {
         "type": "streamable-http", 
-        "url": "http://mcp-viewing:9000/mcp"
+        "url": "http://mcp-viewing:8080/mcp"
       },
       "mcp_server": {
         "type": "streamable-http",
