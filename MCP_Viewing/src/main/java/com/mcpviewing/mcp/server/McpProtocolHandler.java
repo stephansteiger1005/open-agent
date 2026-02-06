@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
+import com.google.gson.ToNumberPolicy;
 import com.mcpviewing.mcp.protocol.JsonRpcError;
 import com.mcpviewing.mcp.protocol.JsonRpcRequest;
 import com.mcpviewing.mcp.protocol.JsonRpcResponse;
@@ -28,7 +29,10 @@ import java.util.Map;
 public class McpProtocolHandler {
 
     private final ToolRegistry toolRegistry;
-    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private final Gson gson = new GsonBuilder()
+        .setPrettyPrinting()
+        .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
+        .create();
     
     private static final String MCP_VERSION = "0.1.0";
     private static final String SERVER_NAME = "mcp-viewing";
