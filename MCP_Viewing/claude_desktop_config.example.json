@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "mcp-viewing": {
+      "command": "java",
+      "args": [
+        "-jar",
+        "/absolute/path/to/mcp-viewing-1.0.0.jar",
+        "--mcp.server.enabled=true",
+        "--spring.main.web-application-type=none"
+      ],
+      "env": {
+        "SPRING_DATASOURCE_URL": "jdbc:derby:memory:PARTINFODB;create=true",
+        "SPRING_JPA_HIBERNATE_DDL_AUTO": "update"
+      }
+    }
+  }
+}

@@ -1,0 +1,122 @@
+pipeline {
+    agent any
+    
+    tools {
+        maven 'Maven 3.9.5'
+        jdk 'JDK 17'
+    }
+    
+    environment {
+        DOCKER_IMAGE = 'mcp-viewing'
+        DOCKER_TAG = "${env.BUILD_NUMBER}"
+        DOCKER_REGISTRY = 'your-registry.example.com'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out code...'
+                checkout scm
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                echo 'Building application...'
+                sh 'mvn clean compile'
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                echo 'Running tests...'
+                sh 'mvn test'
+            }
+            post {
+                always {
+                    junit '**/target/surefire-reports/*.xml'
+                    jacoco(
+                        execPattern: '**/target/jacoco.exec',
+                        classPattern: '**/target/classes',
+                        sourcePattern: '**/src/main/java'
+                    )
+                }
+            }
+        }
+        
+        stage('Package') {
+            steps {
+                echo 'Packaging application...'
+                sh 'mvn package -DskipTests'
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                echo 'Building Docker image...'
+                script {
+                    docker.build("${DOCKER_IMAGE}:${DOCKER_TAG}")
+                    docker.build("${DOCKER_IMAGE}:latest")
+                }
+            }
+        }
+        
+        stage('Test Docker Image') {
+            steps {
+                echo 'Testing Docker image...'
+                script {
+                    // Start container for testing
+                    sh """
+                        docker run -d --name mcp-viewing-test -p 8081:8080 ${DOCKER_IMAGE}:${DOCKER_TAG}
+                        sleep 30
+                        curl -f http://localhost:8081/swagger-ui.html || exit 1
+                        docker stop mcp-viewing-test
+                        docker rm mcp-viewing-test
+                    """
+                }
+            }
+        }
+        
+        stage('Push Docker Image') {
+            when {
+                branch 'main'
+            }
+            steps {
+                echo 'Pushing Docker image to registry...'
+                script {
+                    docker.withRegistry("https://${DOCKER_REGISTRY}", 'docker-credentials') {
+                        docker.image("${DOCKER_IMAGE}:${DOCKER_TAG}").push()
+                        docker.image("${DOCKER_IMAGE}:latest").push()
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy') {
+            when {
+                branch 'main'
+            }
+            steps {
+                echo 'Deploying application...'
+                // Add your deployment steps here
+                // Example: kubectl apply -f k8s/deployment.yaml
+                sh 'echo "Deployment steps would go here"'
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo 'Cleaning up...'
+            cleanWs()
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+            // Send notification (email, Slack, etc.)
+        }
+        failure {
+            echo 'Pipeline failed!'
+            // Send failure notification
+        }
+    }
+}

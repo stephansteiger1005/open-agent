@@ -11,5 +11,3 @@ venv/
 htmlcov/
 dist/
 build/
-MCP_Viewing/*
-MCP_Product/*

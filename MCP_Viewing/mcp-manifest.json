@@ -1,0 +1,139 @@
+{
+  "name": "mcp-viewing",
+  "version": "1.0.0",
+  "description": "MCP Server for PLMXML Data Management - Provides tools to manage part information and PLMXML data in Derby database",
+  "author": "MCP Viewing Team",
+  "license": "Apache-2.0",
+  "mcpVersion": "0.1.0",
+  "capabilities": {
+    "tools": {
+      "supportsProgress": false
+    }
+  },
+  "tools": [
+    {
+      "name": "get_partinfo_latest",
+      "description": "Retrieve the latest PLMXML data for a given part number (Sachnummer). Returns the version with the highest revision and sequence number.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sachnummer": {
+            "type": "string",
+            "description": "Part number (Sachnummer) to retrieve"
+          }
+        },
+        "required": ["sachnummer"]
+      }
+    },
+    {
+      "name": "get_partinfo_specific",
+      "description": "Retrieve a specific version of PLMXML data using part number, revision, and sequence number.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sachnummer": {
+            "type": "string",
+            "description": "Part number (Sachnummer)"
+          },
+          "revision": {
+            "type": "integer",
+            "description": "Revision number"
+          },
+          "sequenz": {
+            "type": "integer",
+            "description": "Sequence number"
+          }
+        },
+        "required": ["sachnummer", "revision", "sequenz"]
+      }
+    },
+    {
+      "name": "create_partinfo",
+      "description": "Create or update PLMXML part information in the database. The PLMXML content must be Base64-encoded.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sachnummer": {
+            "type": "string",
+            "description": "Part number (Sachnummer)"
+          },
+          "revision": {
+            "type": "integer",
+            "description": "Revision number"
+          },
+          "sequenz": {
+            "type": "integer",
+            "description": "Sequence number"
+          },
+          "clazz": {
+            "type": "string",
+            "description": "Part class (e.g., 'Part', 'Assembly')"
+          },
+          "plmxml": {
+            "type": "string",
+            "description": "Base64-encoded PLMXML content"
+          },
+          "obsoleteEntry": {
+            "type": "integer",
+            "description": "Optional: Obsolete entry flag (0 or 1)"
+          },
+          "nomenclature": {
+            "type": "string",
+            "description": "Optional: Part description/name"
+          },
+          "owner": {
+            "type": "string",
+            "description": "Optional: Owner/responsible person"
+          },
+          "status": {
+            "type": "string",
+            "description": "Optional: Status (e.g., 'Active', 'Obsolete')"
+          },
+          "frozen": {
+            "type": "integer",
+            "description": "Optional: Frozen flag (0 or 1)"
+          },
+          "changeDescription": {
+            "type": "string",
+            "description": "Optional: Description of changes"
+          },
+          "checksum3D": {
+            "type": "integer",
+            "description": "Optional: 3D model checksum"
+          },
+          "checksum2D": {
+            "type": "integer",
+            "description": "Optional: 2D drawing checksum"
+          },
+          "checksumBOM": {
+            "type": "integer",
+            "description": "Optional: Bill of Materials checksum"
+          }
+        },
+        "required": ["sachnummer", "revision", "sequenz", "clazz", "plmxml"]
+      }
+    },
+    {
+      "name": "delete_partinfo",
+      "description": "Delete PLMXML part information from the database using the composite key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sachnummer": {
+            "type": "string",
+            "description": "Part number (Sachnummer)"
+          },
+          "revision": {
+            "type": "integer",
+            "description": "Revision number"
+          },
+          "sequenz": {
+            "type": "integer",
+            "description": "Sequence number"
+          }
+        },
+        "required": ["sachnummer", "revision", "sequenz"]
+      }
+    }
+  ]
+}
