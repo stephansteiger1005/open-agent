@@ -34,7 +34,7 @@ public class McpProtocolHandler {
         .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
         .create();
     
-    private static final String MCP_VERSION = "0.1.0";
+    private static final String MCP_VERSION = "2024-11-05";
     private static final String SERVER_NAME = "mcp-viewing";
     private static final String SERVER_VERSION = "1.0.0";
 
