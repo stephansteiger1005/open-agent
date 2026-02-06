@@ -105,7 +105,7 @@ public class McpHttpController {
             try {
                 emitter.send(SseEmitter.event()
                     .name("connected")
-                    .data("{\"status\":\"connected\",\"protocol\":\"MCP\",\"version\":\"0.1.0\"}"));
+                    .data("{\"status\":\"connected\",\"protocol\":\"MCP\",\"version\":\"2024-11-05\"}"));
             } catch (IOException e) {
                 log.error("Error sending SSE event: {}", e.getMessage());
                 emitter.completeWithError(e);
